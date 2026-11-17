@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, X, RefreshCw, ScanLine } from "lucide-react";
 import { detectPageBoundaries, type PageBoundaryCandidate } from "@/lib/opencvPageDetection";
+import { getContainGeometry } from "@/lib/cameraOverlayGeometry";
+import { Button } from "@/components/ui/button";
 
 interface LivePageCameraProps {
   lang: string;
@@ -10,7 +12,6 @@ interface LivePageCameraProps {
 
 export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCameraProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const backdropVideoRef = useRef<HTMLVideoElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const busyRef = useRef(false);
@@ -37,15 +38,12 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
     return () => observer.disconnect();
   }, []);
 
-  const containGeometry = (() => {
-    if (!dimensions.width || !dimensions.height || !previewSize.width || !previewSize.height) return null;
-    const scale = Math.min(previewSize.width / dimensions.width, previewSize.height / dimensions.height);
-    return {
-      scale,
-      offsetX: (previewSize.width - dimensions.width * scale) / 2,
-      offsetY: (previewSize.height - dimensions.height * scale) / 2,
-    };
-  })();
+  const containGeometry = getContainGeometry(
+    dimensions.width,
+    dimensions.height,
+    previewSize.width,
+    previewSize.height,
+  );
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -68,12 +66,17 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error("CAMERA_UNAVAILABLE");
         }
+        const viewportAspect = previewSize.width && previewSize.height
+          ? previewSize.width / previewSize.height
+          : window.innerWidth / window.innerHeight;
+        const portrait = viewportAspect < 1;
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: {
             facingMode: { ideal: facingMode },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: portrait ? 1080 : 1920 },
+            height: { ideal: portrait ? 1920 : 1080 },
+            aspectRatio: { ideal: viewportAspect },
           },
         });
         if (cancelled) {
@@ -187,29 +190,20 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-black text-white" dir={isArabic ? "rtl" : "ltr"}>
       <header className="flex h-14 shrink-0 items-center justify-between px-4">
-        <button type="button" onClick={onClose} aria-label={isArabic ? "إغلاق الكاميرا" : "Fermer la caméra"} className="rounded-full p-2 hover:bg-white/10">
+        <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label={isArabic ? "إغلاق الكاميرا" : "Fermer la caméra"} className="rounded-full text-white hover:bg-white/10 hover:text-white">
           <X className="h-6 w-6" />
-        </button>
+        </Button>
         <div className="flex items-center gap-2 text-sm font-medium">
           <ScanLine className="h-4 w-4 text-emerald-400" />
           {isArabic ? "مسح الورقة" : "Scanner une feuille"}
         </div>
-        <button type="button" onClick={() => setFacingMode((value) => value === "environment" ? "user" : "environment")} aria-label={isArabic ? "تبديل الكاميرا" : "Changer de caméra"} className="rounded-full p-2 hover:bg-white/10">
+        <Button type="button" variant="ghost" size="icon" onClick={() => setFacingMode((value) => value === "environment" ? "user" : "environment")} aria-label={isArabic ? "تبديل الكاميرا" : "Changer de caméra"} className="rounded-full text-white hover:bg-white/10 hover:text-white">
           <RefreshCw className="h-5 w-5" />
-        </button>
+        </Button>
       </header>
 
       <main className="relative flex min-h-0 flex-1 overflow-hidden bg-black">
         <div ref={previewRef} className="relative h-full w-full overflow-hidden">
-          <video
-            ref={backdropVideoRef}
-            autoPlay
-            playsInline
-            muted
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-55 blur-2xl"
-          />
-          <div className="pointer-events-none absolute inset-0 bg-black/25" />
           <video
             ref={videoRef}
             autoPlay
@@ -225,20 +219,21 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
             >
               <polygon
                 points={candidate.corners.map((point) => `${point.x * containGeometry.scale + containGeometry.offsetX},${point.y * containGeometry.scale + containGeometry.offsetY}`).join(" ")}
-                fill="rgba(16,185,129,0.10)"
-                stroke="#10b981"
-                strokeWidth={3}
+                fill="hsl(var(--accent) / 0.2)"
+                stroke="hsl(var(--accent))"
+                strokeWidth={4}
                 strokeLinejoin="round"
+                className="drop-shadow-[0_0_7px_hsl(var(--accent)/0.8)]"
               />
               {candidate.corners.map((point, index) => (
                 <circle
                   key={index}
                   cx={point.x * containGeometry.scale + containGeometry.offsetX}
                   cy={point.y * containGeometry.scale + containGeometry.offsetY}
-                  r={7}
-                  fill="#10b981"
-                  stroke="white"
-                  strokeWidth={2}
+                  r={8}
+                  fill="hsl(var(--accent))"
+                  stroke="hsl(var(--background))"
+                  strokeWidth={2.5}
                 />
               ))}
             </svg>
@@ -249,21 +244,24 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
       </main>
 
       <footer className="flex shrink-0 flex-col items-center gap-4 px-5 pb-8 pt-4">
-        <p className="min-h-5 text-center text-sm text-white/80">
+        <p className="min-h-5 text-center text-sm text-white/80" aria-live="polite">
           {candidate
             ? (isArabic ? "تم اكتشاف الورقة — حافظ على ثبات الهاتف" : "Feuille détectée — gardez le téléphone stable")
-            : (isArabic ? "وجّه الكاميرا نحو الورقة كاملة" : "Cadrez toute la feuille dans l’image")}
+            : analyzing
+              ? (isArabic ? "جارٍ البحث عن حواف الورقة…" : "Recherche des bords de la feuille…")
+              : (isArabic ? "وجّه الكاميرا نحو الورقة كاملة" : "Cadrez toute la feuille dans l’image")}
           {analyzing && !candidate ? " ·" : ""}
         </p>
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={capture}
           disabled={!ready || !!cameraError}
           aria-label={isArabic ? "التقاط الصورة" : "Prendre la photo"}
-          className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-[5px] border-emerald-400 bg-white shadow-[0_0_0_5px_rgba(16,185,129,0.2)] disabled:opacity-40"
+          className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-[5px] border-accent bg-primary-foreground text-foreground shadow-[0_0_0_5px_hsl(var(--accent)/0.22)] hover:bg-primary-foreground disabled:opacity-40"
         >
-          <Camera className="h-8 w-8 text-neutral-900" />
-        </button>
+          <Camera className="h-8 w-8 text-foreground" />
+        </Button>
       </footer>
     </div>
   );
