@@ -10,6 +10,7 @@ interface LivePageCameraProps {
 
 export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCameraProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const backdropVideoRef = useRef<HTMLVideoElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const busyRef = useRef(false);
@@ -36,9 +37,9 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
     return () => observer.disconnect();
   }, []);
 
-  const coverGeometry = (() => {
+  const containGeometry = (() => {
     if (!dimensions.width || !dimensions.height || !previewSize.width || !previewSize.height) return null;
-    const scale = Math.max(previewSize.width / dimensions.width, previewSize.height / dimensions.height);
+    const scale = Math.min(previewSize.width / dimensions.width, previewSize.height / dimensions.height);
     return {
       scale,
       offsetX: (previewSize.width - dimensions.width * scale) / 2,
@@ -201,20 +202,29 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
       <main className="relative flex min-h-0 flex-1 overflow-hidden bg-black">
         <div ref={previewRef} className="relative h-full w-full overflow-hidden">
           <video
+            ref={backdropVideoRef}
+            autoPlay
+            playsInline
+            muted
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-55 blur-2xl"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-black/25" />
+          <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-contain"
           />
-          {ready && dimensions.width > 0 && candidate && coverGeometry && previewSize.width > 0 && (
+          {ready && dimensions.width > 0 && candidate && containGeometry && previewSize.width > 0 && (
             <svg
               viewBox={`0 0 ${previewSize.width} ${previewSize.height}`}
               preserveAspectRatio="none"
               className="pointer-events-none absolute inset-0 h-full w-full"
             >
               <polygon
-                points={candidate.corners.map((point) => `${point.x * coverGeometry.scale + coverGeometry.offsetX},${point.y * coverGeometry.scale + coverGeometry.offsetY}`).join(" ")}
+                points={candidate.corners.map((point) => `${point.x * containGeometry.scale + containGeometry.offsetX},${point.y * containGeometry.scale + containGeometry.offsetY}`).join(" ")}
                 fill="rgba(16,185,129,0.10)"
                 stroke="#10b981"
                 strokeWidth={3}
@@ -223,8 +233,8 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
               {candidate.corners.map((point, index) => (
                 <circle
                   key={index}
-                  cx={point.x * coverGeometry.scale + coverGeometry.offsetX}
-                  cy={point.y * coverGeometry.scale + coverGeometry.offsetY}
+                  cx={point.x * containGeometry.scale + containGeometry.offsetX}
+                  cy={point.y * containGeometry.scale + containGeometry.offsetY}
                   r={7}
                   fill="#10b981"
                   stroke="white"
