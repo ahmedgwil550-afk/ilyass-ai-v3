@@ -1,3 +1,5 @@
+import { normalizeUnevenLighting } from "./imageEnhancement";
+
 /**
  * تجهيز صورة الورقة قبل إرسالها للنموذج.
  * نحافظ على دقة أعلى للرموز الصغيرة، مع تصحيح EXIF وتحسين محافظ للتباين
@@ -186,6 +188,9 @@ export async function prepareImage(
     context.drawImage(decoded.src, 0, 0, dimensions.width, dimensions.height);
 
     try {
+      // Normalize broad illumination gradients before conservative global levels.
+      // This reduces shadows without binarizing text or destroying colored diagrams.
+      normalizeUnevenLighting(context, dimensions.width, dimensions.height);
       autoLevels(context, dimensions.width, dimensions.height);
       const crop = blankMargins(context, dimensions.width, dimensions.height);
       const hasMargins = crop.width < dimensions.width || crop.height < dimensions.height;
