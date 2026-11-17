@@ -15,6 +15,8 @@ import AnswerFeedback from "@/components/AnswerFeedback";
 import { useAnswerFontSize } from "@/hooks/use-answer-font";
 import { stabilizeStreaming } from "@/lib/stabilizeStreaming";
 import { prepareImageVariants } from "@/lib/imagePrep";
+import PageBoundaryEditor from "@/components/chat/PageBoundaryEditor";
+import type { PageBoundaryDetection } from "@/lib/opencvPageDetection";
 import { splitThinking, detectLang, fallbackLangForSubject } from "@/lib/thinking";
 import ThinkingPanel from "@/components/ThinkingPanel";
 import VerificationBadge from "@/components/VerificationBadge";
@@ -95,6 +97,7 @@ const Index = () => {
   const [imageBase64s, setImageBase64s] = useState<string[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageGroupSizes, setImageGroupSizes] = useState<number[]>([]);
+  const [pageBoundaryDetections, setPageBoundaryDetections] = useState<(PageBoundaryDetection | null)[]>([]);
   const [imageReviewResult, setImageReviewResult] = useState<{ transcript: string; needsReview: boolean; figureMissing: boolean } | null>(null);
   const [imageReviewDraft, setImageReviewDraft] = useState("");
   const [imageReviewOpen, setImageReviewOpen] = useState(false);
@@ -284,6 +287,7 @@ const Index = () => {
     const newPreviews: string[] = [];
     const newBase64s: string[] = [];
     const newGroupSizes: number[] = [];
+    const newPageDetections: (PageBoundaryDetection | null)[] = [];
     const qualityWarnings = new Set<string>();
     for (const file of files) {
       if (file.size > 10 * 1024 * 1024) {
@@ -303,11 +307,13 @@ const Index = () => {
         newBase64s.push(crop.split(",")[1]);
       }
       newGroupSizes.push(1 + prepared.detailCrops.length);
+      newPageDetections.push(prepared.pageBoundaryDetection);
     }
     if (newPreviews.length === 0) return;
     setImagePreviews((prev) => [...prev, ...newPreviews]);
     setImageBase64s((prev) => [...prev, ...newBase64s]);
     setImageGroupSizes((prev) => [...prev, ...newGroupSizes]);
+    setPageBoundaryDetections((prev) => [...prev, ...newPageDetections]);
     if (qualityWarnings.size > 0) {
       const warningText = lang === "ar"
         ? "قد تكون الصورة ضعيفة الإضاءة أو التباين أو غير حادة. حاول وضع الورقة في إضاءة متوازنة وتثبيت الهاتف قبل الإرسال."
@@ -652,6 +658,7 @@ const Index = () => {
       setImageReviewDraft("");
       setImageReviewOpen(false);
       setImagePreviews([]);
+      setPageBoundaryDetections([]);
       await replayCachedAnswer(cached, (chunk) => {
         if (controller.signal.aborted) return;
         fullAnswer += chunk;
@@ -706,6 +713,7 @@ const Index = () => {
     setImageReviewDraft("");
     setImageReviewOpen(false);
     setImagePreviews([]);
+    setPageBoundaryDetections([]);
 
     const runStream = async (extraContent?: string) => {
       const msgsForApi: Msg[] = extraContent
@@ -811,6 +819,7 @@ const Index = () => {
     setImageReviewDraft("");
     setImageReviewOpen(false);
     setImagePreviews([]);
+    setPageBoundaryDetections([]);
     removePdf();
     setChatId(Date.now().toString());
   };
@@ -1190,8 +1199,34 @@ const Index = () => {
           {imagePreviews.length > 0 && (
             <div className="flex flex-wrap gap-2 px-2">
               {imagePreviews.map((img, i) => (
-                <div key={i} className="relative inline-block">
+                <div key={i} className="relative flex w-full max-w-[520px] flex-col items-start gap-2">
                   <img src={img} alt={`uploaded ${i + 1}`} className="h-16 w-auto rounded-lg border border-border object-cover" />
+                  {pageBoundaryDetections[i]?.candidates[0] && (
+                    <PageBoundaryEditor
+                      image={img}
+                      candidate={pageBoundaryDetections[i]!.candidates[0]}
+                      lang={lang}
+                      onApply={(correctedImage) => {
+                        const start = imageGroupSizes.slice(0, i).reduce((sum, size) => sum + size, 0);
+                        const count = imageGroupSizes[i] ?? 1;
+                        setImagePreviews((previous) => previous.map((value, index) => index === i ? correctedImage : value));
+                        setImageBase64s((previous) => [
+                          ...previous.slice(0, start),
+                          correctedImage.split(",")[1],
+                          ...previous.slice(start + count),
+                        ]);
+                        setImageGroupSizes((previous) => previous.map((size, index) => index === i ? 1 : size));
+                        setPageBoundaryDetections((previous) => previous.map((value, index) => index === i ? null : value));
+                        setImageReviewResult(null);
+                        setImageReviewDraft("");
+                        setImageReviewOpen(false);
+                        toast({
+                          title: lang === "ar" ? "تم تصحيح منظور الصورة" : "Perspective corrigée",
+                          description: lang === "ar" ? "ستُرسل الصورة المصححة إلى ILYASS AI." : "L’image corrigée sera envoyée à ILYASS AI.",
+                        });
+                      }}
+                    />
+                  )}
                   <button
                     disabled={isCheckingImage}
                     onClick={() => {
@@ -1200,6 +1235,7 @@ const Index = () => {
                       setImagePreviews((prev) => prev.filter((_, idx) => idx !== i));
                       setImageBase64s((prev) => [...prev.slice(0, start), ...prev.slice(start + count)]);
                       setImageGroupSizes((prev) => prev.filter((_, idx) => idx !== i));
+                      setPageBoundaryDetections((prev) => prev.filter((_, idx) => idx !== i));
                       setImageReviewResult(null);
                       setImageReviewDraft("");
                       setImageReviewOpen(false);

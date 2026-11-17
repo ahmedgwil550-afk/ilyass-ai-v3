@@ -192,9 +192,12 @@ export async function prepareImage(
     context.drawImage(decoded.src, 0, 0, dimensions.width, dimensions.height);
     // Detect the sheet boundary from the unenhanced, full-frame capture. This is
     // metadata only: no perspective warp is applied without explicit confirmation.
+    let hasDetectedPageBoundary = false;
     if (onPageBoundaryDetection) {
       try {
-        onPageBoundaryDetection(await detectPageBoundaries(context.getImageData(0, 0, dimensions.width, dimensions.height)));
+        const detection = await detectPageBoundaries(context.getImageData(0, 0, dimensions.width, dimensions.height));
+        hasDetectedPageBoundary = Boolean(detection?.candidates.length);
+        onPageBoundaryDetection(detection);
       } catch (error) {
         console.warn("OpenCV page-boundary detection unavailable; preserving the original image:", error);
         onPageBoundaryDetection(null);
@@ -218,6 +221,7 @@ export async function prepareImage(
       // Reject aggressive crops: retain the complete sheet if content bounds are uncertain.
       if (
         hasMargins &&
+        !hasDetectedPageBoundary &&
         crop.width > dimensions.width * 0.5 &&
         crop.height > dimensions.height * 0.5
       ) {
