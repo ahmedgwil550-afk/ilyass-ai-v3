@@ -1,6 +1,7 @@
 import {
   computeHomography,
   isUsablePageQuadrilateral,
+  orderQuadrilateral,
   transformPoint,
   type Point2D,
   type Quadrilateral,
@@ -104,16 +105,18 @@ export function rectifyPagePerspective(
 ): HTMLCanvasElement | null {
   const { confidence, minConfidence = DEFAULT_MIN_CONFIDENCE, maxSide = DEFAULT_MAX_SIDE } = options;
 
+  const orderedCorners = orderQuadrilateral(corners);
   if (
+    !orderedCorners ||
     !Number.isFinite(confidence) ||
     !Number.isFinite(minConfidence) ||
     minConfidence < 0 || minConfidence > 1 ||
     confidence < minConfidence ||
     !source || source.width < 2 || source.height < 2 ||
-    !isUsablePageQuadrilateral(corners, source.width, source.height)
+    !isUsablePageQuadrilateral(orderedCorners, source.width, source.height)
   ) return null;
 
-  const dimensions = getRectifiedDimensions(corners, maxSide);
+  const dimensions = getRectifiedDimensions(orderedCorners, maxSide);
   if (!dimensions) return null;
 
   const destination: Quadrilateral = [
@@ -124,7 +127,7 @@ export function rectifyPagePerspective(
   ];
 
   // Inverse mapping avoids holes: each output pixel samples the source page.
-  const inverse = computeHomography(destination, corners);
+  const inverse = computeHomography(destination, orderedCorners);
   if (!inverse) return null;
 
   try {
