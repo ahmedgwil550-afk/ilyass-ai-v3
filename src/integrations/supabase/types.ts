@@ -14,13 +14,46 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_usage: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: string
+          request_count: number
+          request_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id?: string
+          request_count?: number
+          request_date?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          request_count?: number
+          request_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consume_daily_usage: {
+        Args: { p_daily_limit?: number; p_device_id: string }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          request_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
