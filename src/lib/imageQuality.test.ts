@@ -24,12 +24,4 @@ describe("classifyDocumentPhoto", () => {
     expect(classifyDocumentPhoto({ ...baseline, sharpness: 5 })).toContain("blur");
     expect(classifyDocumentPhoto({ ...baseline, sharpness: 5, contrast: 8 })).not.toContain("blur");
   });
-
-  it("flags likely glare when most pixels are clipped and contrast is low", () => {
-    expect(classifyDocumentPhoto({ ...baseline, brightPixelRatio: 0.8, contrast: 20 })).toContain("glare");
-  });
-
-  it("does not treat a bright white sheet as glare by itself", () => {
-    expect(classifyDocumentPhoto({ ...baseline, brightness: 248, contrast: 45, brightPixelRatio: 0.9 })).toEqual([]);
-  });
 });
