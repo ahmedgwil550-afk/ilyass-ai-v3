@@ -1,5 +1,6 @@
 import { normalizeUnevenLighting } from "./imageEnhancement";
 import { analyzeDocumentPhoto, type DocumentPhotoWarning } from "./imageQuality";
+import { detectPageBoundaries, type PageBoundaryDetection } from "./opencvPageDetection";
 
 /**
  * تجهيز صورة الورقة قبل إرسالها للنموذج.
@@ -173,6 +174,7 @@ export async function prepareImage(
   maxSide = MAX_SIDE,
   quality = QUALITY,
   onQualityAnalysis?: (warnings: DocumentPhotoWarning[]) => void,
+  onPageBoundaryDetection?: (detection: PageBoundaryDetection | null) => void,
 ): Promise<string | null> {
   const decoded = await decode(file);
   if (!decoded) return null;
@@ -188,6 +190,17 @@ export async function prepareImage(
 
     context.imageSmoothingQuality = "high";
     context.drawImage(decoded.src, 0, 0, dimensions.width, dimensions.height);
+    // Detect the sheet boundary from the unenhanced, full-frame capture. This is
+    // metadata only: no perspective warp is applied without explicit confirmation.
+    if (onPageBoundaryDetection) {
+      try {
+        onPageBoundaryDetection(await detectPageBoundaries(context.getImageData(0, 0, dimensions.width, dimensions.height)));
+      } catch (error) {
+        console.warn("OpenCV page-boundary detection unavailable; preserving the original image:", error);
+        onPageBoundaryDetection(null);
+      }
+    }
+
     // Measure the unenhanced capture so automatic correction cannot hide a poor photo.
     if (onQualityAnalysis) {
       try { onQualityAnalysis(analyzeDocumentPhoto(context, dimensions.width, dimensions.height)); }
@@ -242,6 +255,8 @@ export interface PreparedImageVariants {
   detailCrops: string[];
   /** Non-blocking capture guidance; never changes or rejects the uploaded image. */
   qualityWarnings: DocumentPhotoWarning[];
+  /** OpenCV candidates for a future/visible user-confirmed correction step. */
+  pageBoundaryDetection: PageBoundaryDetection | null;
 }
 
 interface CropRect {
@@ -312,22 +327,27 @@ async function loadPreparedDataUrl(dataUrl: string): Promise<HTMLImageElement | 
  */
 export async function prepareImageVariants(file: File): Promise<PreparedImageVariants | null> {
   let qualityWarnings: DocumentPhotoWarning[] = [];
-  const original = await prepareImage(file, MAX_SIDE, QUALITY, (warnings) => {
-    qualityWarnings = warnings;
-  });
+  let pageBoundaryDetection: PageBoundaryDetection | null = null;
+  const original = await prepareImage(
+    file,
+    MAX_SIDE,
+    QUALITY,
+    (warnings) => { qualityWarnings = warnings; },
+    (detection) => { pageBoundaryDetection = detection; },
+  );
   if (!original) return null;
 
   const image = await loadPreparedDataUrl(original);
-  if (!image) return { original, detailCrops: [], qualityWarnings: [] };
+  if (!image) return { original, detailCrops: [], qualityWarnings, pageBoundaryDetection };
 
   const source = document.createElement("canvas");
   source.width = image.naturalWidth;
   source.height = image.naturalHeight;
   const sourceContext = source.getContext("2d", { willReadFrequently: true });
-  if (!sourceContext) return { original, detailCrops: [], qualityWarnings: [] };
+  if (!sourceContext) return { original, detailCrops: [], qualityWarnings, pageBoundaryDetection };
   sourceContext.drawImage(image, 0, 0);
   const rects = getDetailCropRects(image.naturalWidth, image.naturalHeight);
-  if (!rects.length) return { original, detailCrops: [], qualityWarnings };
+  if (!rects.length) return { original, detailCrops: [], qualityWarnings, pageBoundaryDetection };
 
   const detailCrops: string[] = [];
   for (const rect of rects) {
@@ -353,5 +373,5 @@ export async function prepareImageVariants(file: File): Promise<PreparedImageVar
     }
   }
 
-  return { original, detailCrops, qualityWarnings };
+  return { original, detailCrops, qualityWarnings, pageBoundaryDetection };
 }
