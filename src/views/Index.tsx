@@ -658,7 +658,6 @@ const Index = () => {
       setImageReviewDraft("");
       setImageReviewOpen(false);
       setImagePreviews([]);
-    setPageBoundaryDetections([]);
       setPageBoundaryDetections([]);
       await replayCachedAnswer(cached, (chunk) => {
         if (controller.signal.aborted) return;
@@ -714,6 +713,7 @@ const Index = () => {
     setImageReviewDraft("");
     setImageReviewOpen(false);
     setImagePreviews([]);
+    setPageBoundaryDetections([]);
 
     const runStream = async (extraContent?: string) => {
       const msgsForApi: Msg[] = extraContent
@@ -819,6 +819,7 @@ const Index = () => {
     setImageReviewDraft("");
     setImageReviewOpen(false);
     setImagePreviews([]);
+    setPageBoundaryDetections([]);
     removePdf();
     setChatId(Date.now().toString());
   };
