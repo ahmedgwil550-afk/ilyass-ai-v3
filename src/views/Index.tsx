@@ -97,6 +97,7 @@ const Index = () => {
   const hasAssistantReplied = useMemo(() => messages.some((m) => m.role === "assistant"), [messages]);
   const [imageBase64s, setImageBase64s] = useState<string[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [imageGroupSizes, setImageGroupSizes] = useState<number[]>([]);
   const [pageBoundaryDetections, setPageBoundaryDetections] = useState<(PageBoundaryDetection | null)[]>([]);
   const [imageReviewResult, setImageReviewResult] = useState<{ transcript: string; needsReview: boolean; figureMissing: boolean } | null>(null);
@@ -1196,12 +1197,43 @@ const Index = () => {
             />
           )}
 
+          {selectedImagePreview && (
+            <div
+              className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm"
+              role="dialog"
+              aria-modal="true"
+              aria-label={lang === "ar" ? "معاينة الصورة" : "Aperçu de l’image"}
+              onClick={() => setSelectedImagePreview(null)}
+              onKeyDown={(event) => { if (event.key === "Escape") setSelectedImagePreview(null); }}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedImagePreview(null)}
+                aria-label={lang === "ar" ? "إغلاق معاينة الصورة" : "Fermer l’aperçu"}
+                className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-2xl text-white backdrop-blur-md"
+              >×</button>
+              <img
+                src={selectedImagePreview}
+                alt={lang === "ar" ? "الصورة المرفقة بالحجم الكامل" : "Image jointe en taille réelle"}
+                onClick={(event) => event.stopPropagation()}
+                className="max-h-[88dvh] max-w-full select-none object-contain"
+              />
+            </div>
+          )}
+
           {/* Image Previews */}
           {imagePreviews.length > 0 && (
             <div className="flex flex-wrap gap-2 px-2">
               {imagePreviews.map((img, i) => (
                 <div key={i} className="relative flex w-full max-w-[520px] flex-col items-start gap-2">
-                  <img src={img} alt={`uploaded ${i + 1}`} className="h-16 w-auto rounded-lg border border-border object-cover" />
+                  <button
+  type="button"
+  onClick={() => setSelectedImagePreview(img)}
+  aria-label={lang === "ar" ? "عرض الصورة بالحجم الكامل" : "Afficher l’image en grand"}
+  className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+>
+  <img src={img} alt={`uploaded ${i + 1}`} className="h-16 w-auto rounded-lg border border-border object-cover" />
+</button>
                   {pageBoundaryDetections[i]?.candidates[0] && (
                     <PageBoundaryEditor
                       image={img}
