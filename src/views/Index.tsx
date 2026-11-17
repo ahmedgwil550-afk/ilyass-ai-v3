@@ -16,6 +16,7 @@ import { useAnswerFontSize } from "@/hooks/use-answer-font";
 import { stabilizeStreaming } from "@/lib/stabilizeStreaming";
 import { prepareImageVariants } from "@/lib/imagePrep";
 import PageBoundaryEditor from "@/components/chat/PageBoundaryEditor";
+import LivePageCamera from "@/components/chat/LivePageCamera";
 import type { PageBoundaryDetection } from "@/lib/opencvPageDetection";
 import { splitThinking, detectLang, fallbackLangForSubject } from "@/lib/thinking";
 import ThinkingPanel from "@/components/ThinkingPanel";
@@ -145,6 +146,7 @@ const Index = () => {
   const [isPdfConverting, setIsPdfConverting] = useState(false);
   const [pdfAnalyzingPage, setPdfAnalyzingPage] = useState<number | undefined>();
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [showLiveCamera, setShowLiveCamera] = useState(false);
   const attachMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -200,7 +202,6 @@ const Index = () => {
     localStorage.setItem("ilyass-model-mode", modelMode);
   }, [modelMode]);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -1295,8 +1296,18 @@ const Index = () => {
             </section>
           )}
 
+          {showLiveCamera && (
+            <LivePageCamera
+              lang={lang}
+              onClose={() => setShowLiveCamera(false)}
+              onCapture={(file) => {
+                setShowLiveCamera(false);
+                void addImageFiles([file]);
+              }}
+            />
+          )}
+
           {/* Hidden file inputs */}
-          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
           <input ref={galleryInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif" multiple className="hidden" onChange={handleImageUpload} />
           <input ref={pdfInputRef} type="file" accept=".pdf,application/pdf" className="hidden" onChange={handlePdfUpload} />
 
@@ -1326,7 +1337,7 @@ const Index = () => {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.05 }}
-                      onClick={() => { fileInputRef.current?.click(); setAttachMenuOpen(false); }}
+                      onClick={() => { setShowLiveCamera(true); setAttachMenuOpen(false); }}
                       className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                       <Camera className="h-4 w-4" />
