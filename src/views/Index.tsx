@@ -658,6 +658,8 @@ const Index = () => {
       setImageReviewDraft("");
       setImageReviewOpen(false);
       setImagePreviews([]);
+    setPageBoundaryDetections([]);
+      setPageBoundaryDetections([]);
       await replayCachedAnswer(cached, (chunk) => {
         if (controller.signal.aborted) return;
         fullAnswer += chunk;
@@ -1196,7 +1198,7 @@ const Index = () => {
           {imagePreviews.length > 0 && (
             <div className="flex flex-wrap gap-2 px-2">
               {imagePreviews.map((img, i) => (
-                <div key={i} className="relative inline-block">
+                <div key={i} className="relative flex w-full max-w-[520px] flex-col items-start gap-2">
                   <img src={img} alt={`uploaded ${i + 1}`} className="h-16 w-auto rounded-lg border border-border object-cover" />
                   {pageBoundaryDetections[i]?.candidates[0] && (
                     <PageBoundaryEditor
