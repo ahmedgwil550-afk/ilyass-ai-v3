@@ -1,10 +1,9 @@
-export type DocumentPhotoWarning = "low-light" | "low-contrast" | "blur" | "glare";
+export type DocumentPhotoWarning = "low-light" | "low-contrast" | "blur";
 
 export interface DocumentPhotoMetrics {
   brightness: number;
   contrast: number;
   sharpness: number;
-  brightPixelRatio: number;
 }
 
 /** Pure classifier so thresholds can be tested without browser canvas APIs. */
@@ -13,7 +12,6 @@ export function classifyDocumentPhoto(metrics: DocumentPhotoMetrics): DocumentPh
   if (metrics.brightness < 105) warnings.push("low-light");
   if (metrics.contrast < 19 && metrics.brightness < 238) warnings.push("low-contrast");
   if (metrics.sharpness < 13 && metrics.contrast > 17) warnings.push("blur");
-  if (metrics.brightPixelRatio > 0.62 && metrics.contrast < 32) warnings.push("glare");
   return warnings;
 }
 
@@ -42,14 +40,12 @@ export function analyzeDocumentPhoto(
   const gray = new Uint8Array(sampleWidth * sampleHeight);
   let sum = 0;
   let sumSquares = 0;
-  let bright = 0;
 
   for (let i = 0, p = 0; i < pixels.length; i += 4, p++) {
     const value = Math.round(0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]);
     gray[p] = value;
     sum += value;
     sumSquares += value * value;
-    if (value >= 248) bright++;
   }
 
   const count = gray.length;
@@ -79,6 +75,5 @@ export function analyzeDocumentPhoto(
     brightness,
     contrast,
     sharpness,
-    brightPixelRatio: bright / count,
   });
 }
