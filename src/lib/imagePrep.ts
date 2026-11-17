@@ -172,6 +172,7 @@ export async function prepareImage(
   file: File,
   maxSide = MAX_SIDE,
   quality = QUALITY,
+  onQualityAnalysis?: (warnings: DocumentPhotoWarning[]) => void,
 ): Promise<string | null> {
   const decoded = await decode(file);
   if (!decoded) return null;
@@ -187,6 +188,11 @@ export async function prepareImage(
 
     context.imageSmoothingQuality = "high";
     context.drawImage(decoded.src, 0, 0, dimensions.width, dimensions.height);
+    // Measure the unenhanced capture so automatic correction cannot hide a poor photo.
+    if (onQualityAnalysis) {
+      try { onQualityAnalysis(analyzeDocumentPhoto(context, dimensions.width, dimensions.height)); }
+      catch { /* Quality diagnostics must never block image preparation. */ }
+    }
 
     try {
       // Normalize broad illumination gradients before conservative global levels.
@@ -305,7 +311,10 @@ async function loadPreparedDataUrl(dataUrl: string): Promise<HTMLImageElement | 
  * exam sheets. Callers should display only original, not the internal crops.
  */
 export async function prepareImageVariants(file: File): Promise<PreparedImageVariants | null> {
-  const original = await prepareImage(file);
+  let qualityWarnings: DocumentPhotoWarning[] = [];
+  const original = await prepareImage(file, MAX_SIDE, QUALITY, (warnings) => {
+    qualityWarnings = warnings;
+  });
   if (!original) return null;
 
   const image = await loadPreparedDataUrl(original);
@@ -317,7 +326,6 @@ export async function prepareImageVariants(file: File): Promise<PreparedImageVar
   const sourceContext = source.getContext("2d", { willReadFrequently: true });
   if (!sourceContext) return { original, detailCrops: [], qualityWarnings: [] };
   sourceContext.drawImage(image, 0, 0);
-  const qualityWarnings = analyzeDocumentPhoto(sourceContext, image.naturalWidth, image.naturalHeight);
   const rects = getDetailCropRects(image.naturalWidth, image.naturalHeight);
   if (!rects.length) return { original, detailCrops: [], qualityWarnings };
 
