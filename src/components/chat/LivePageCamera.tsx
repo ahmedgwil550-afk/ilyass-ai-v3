@@ -12,6 +12,8 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const busyRef = useRef(false);
+  const smoothedCornersRef = useRef<PageBoundaryCandidate["corners"] | null>(null);
+  const missedFramesRef = useRef(0);
   const mountedRef = useRef(true);
   const [cameraError, setCameraError] = useState("");
   const [ready, setReady] = useState(false);
@@ -35,6 +37,8 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
       setCameraError("");
       setReady(false);
       setCandidate(null);
+      smoothedCornersRef.current = null;
+      missedFramesRef.current = 0;
       stopCamera();
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
@@ -82,13 +86,27 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
               if (!cancelled && mountedRef.current) {
                 const best = result?.candidates[0];
                 if (best) {
-                  const restored = {
-                    ...best,
-                    corners: best.corners.map((point) => ({ x: point.x / scale, y: point.y / scale })) as PageBoundaryCandidate["corners"],
-                  };
-                  setCandidate(restored);
+                  // Map detector coordinates to video pixels and smooth frame-to-frame jitter.
+                  const nextCorners = best.corners.map((point) => ({
+                    x: point.x / scale,
+                    y: point.y / scale,
+                  })) as PageBoundaryCandidate["corners"];
+                  const previous = smoothedCornersRef.current;
+                  const alpha = previous ? 0.42 : 1;
+                  const smoothed = nextCorners.map((point, index) => ({
+                    x: previous ? previous[index].x + (point.x - previous[index].x) * alpha : point.x,
+                    y: previous ? previous[index].y + (point.y - previous[index].y) * alpha : point.y,
+                  })) as PageBoundaryCandidate["corners"];
+                  smoothedCornersRef.current = smoothed;
+                  missedFramesRef.current = 0;
+                  setCandidate({ ...best, corners: smoothed });
                 } else {
-                  setCandidate(null);
+                  // Ignore one missed frame to prevent flicker during brief blur.
+                  missedFramesRef.current += 1;
+                  if (missedFramesRef.current >= 2) {
+                    smoothedCornersRef.current = null;
+                    setCandidate(null);
+                  }
                 }
               }
             }
@@ -158,11 +176,12 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
       </header>
 
       <main className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-neutral-950">
-        <video ref={videoRef} autoPlay playsInline muted className="block max-h-full max-w-full object-contain" />
+        <div className="relative h-full w-full overflow-hidden">
+        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 h-full w-full object-contain" />
         {ready && dimensions.width > 0 && candidate && (
           <svg
             viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-            preserveAspectRatio="none"
+            preserveAspectRatio="xMidYMid meet"
             className="pointer-events-none absolute h-auto w-full max-h-full"
             style={{ aspectRatio: `${dimensions.width} / ${dimensions.height}`, width: "auto", height: "100%", maxWidth: "100%" }}
           >
@@ -180,6 +199,7 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
         )}
         {!ready && !cameraError && <p className="absolute text-sm text-white/70">{isArabic ? "جارٍ تشغيل الكاميرا…" : "Démarrage de la caméra…"}</p>}
         {cameraError && <div className="absolute mx-6 rounded-xl bg-neutral-900/95 p-4 text-center text-sm">{cameraError}</div>}
+        </div>
       </main>
 
       <footer className="flex shrink-0 flex-col items-center gap-4 px-5 pb-8 pt-4">
