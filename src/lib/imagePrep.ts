@@ -1,4 +1,5 @@
 import { normalizeUnevenLighting } from "./imageEnhancement";
+import { analyzeDocumentPhoto, type DocumentPhotoWarning } from "./imageQuality";
 
 /**
  * تجهيز صورة الورقة قبل إرسالها للنموذج.
@@ -233,6 +234,8 @@ export interface PreparedImageVariants {
   original: string;
   /** At most two overlapping detail crops, selected only when they contain enough ink. */
   detailCrops: string[];
+  /** Non-blocking capture guidance; never changes or rejects the uploaded image. */
+  qualityWarnings: DocumentPhotoWarning[];
 }
 
 interface CropRect {
@@ -306,17 +309,17 @@ export async function prepareImageVariants(file: File): Promise<PreparedImageVar
   if (!original) return null;
 
   const image = await loadPreparedDataUrl(original);
-  if (!image) return { original, detailCrops: [] };
-
-  const rects = getDetailCropRects(image.naturalWidth, image.naturalHeight);
-  if (!rects.length) return { original, detailCrops: [] };
+  if (!image) return { original, detailCrops: [], qualityWarnings: [] };
 
   const source = document.createElement("canvas");
   source.width = image.naturalWidth;
   source.height = image.naturalHeight;
   const sourceContext = source.getContext("2d", { willReadFrequently: true });
-  if (!sourceContext) return { original, detailCrops: [] };
+  if (!sourceContext) return { original, detailCrops: [], qualityWarnings: [] };
   sourceContext.drawImage(image, 0, 0);
+  const qualityWarnings = analyzeDocumentPhoto(sourceContext, image.naturalWidth, image.naturalHeight);
+  const rects = getDetailCropRects(image.naturalWidth, image.naturalHeight);
+  if (!rects.length) return { original, detailCrops: [], qualityWarnings };
 
   const detailCrops: string[] = [];
   for (const rect of rects) {
@@ -342,5 +345,5 @@ export async function prepareImageVariants(file: File): Promise<PreparedImageVar
     }
   }
 
-  return { original, detailCrops };
+  return { original, detailCrops, qualityWarnings };
 }
