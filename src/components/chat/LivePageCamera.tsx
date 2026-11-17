@@ -10,6 +10,7 @@ interface LivePageCameraProps {
 
 export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCameraProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const busyRef = useRef(false);
   const smoothedCornersRef = useRef<PageBoundaryCandidate["corners"] | null>(null);
@@ -18,10 +19,32 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
   const [cameraError, setCameraError] = useState("");
   const [ready, setReady] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
   const [candidate, setCandidate] = useState<PageBoundaryCandidate | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const isArabic = lang === "ar";
+
+  // Keep overlay geometry in the same CSS-pixel space as the cover-cropped video.
+  useEffect(() => {
+    const element = previewRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setPreviewSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const coverGeometry = (() => {
+    if (!dimensions.width || !dimensions.height || !previewSize.width || !previewSize.height) return null;
+    const scale = Math.max(previewSize.width / dimensions.width, previewSize.height / dimensions.height);
+    return {
+      scale,
+      offsetX: (previewSize.width - dimensions.width * scale) / 2,
+      offsetY: (previewSize.height - dimensions.height * scale) / 2,
+    };
+  })();
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -175,30 +198,43 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
         </button>
       </header>
 
-      <main className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-neutral-950">
-        <div className="relative h-full w-full overflow-hidden">
-        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 h-full w-full object-contain" />
-        {ready && dimensions.width > 0 && candidate && (
-          <svg
-            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-            preserveAspectRatio="xMidYMid meet"
-            className="pointer-events-none absolute h-auto w-full max-h-full"
-            style={{ aspectRatio: `${dimensions.width} / ${dimensions.height}`, width: "auto", height: "100%", maxWidth: "100%" }}
-          >
-            <polygon
-              points={candidate.corners.map((point) => `${point.x},${point.y}`).join(" ")}
-              fill="rgba(16,185,129,0.10)"
-              stroke="#10b981"
-              strokeWidth={Math.max(4, dimensions.width / 360)}
-              strokeLinejoin="round"
-            />
-            {candidate.corners.map((point, index) => (
-              <circle key={index} cx={point.x} cy={point.y} r={Math.max(7, dimensions.width / 110)} fill="#10b981" stroke="white" strokeWidth={Math.max(2, dimensions.width / 700)} />
-            ))}
-          </svg>
-        )}
-        {!ready && !cameraError && <p className="absolute text-sm text-white/70">{isArabic ? "جارٍ تشغيل الكاميرا…" : "Démarrage de la caméra…"}</p>}
-        {cameraError && <div className="absolute mx-6 rounded-xl bg-neutral-900/95 p-4 text-center text-sm">{cameraError}</div>}
+      <main className="relative flex min-h-0 flex-1 overflow-hidden bg-black">
+        <div ref={previewRef} className="relative h-full w-full overflow-hidden">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          {ready && dimensions.width > 0 && candidate && coverGeometry && previewSize.width > 0 && (
+            <svg
+              viewBox={`0 0 ${previewSize.width} ${previewSize.height}`}
+              preserveAspectRatio="none"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+            >
+              <polygon
+                points={candidate.corners.map((point) => `${point.x * coverGeometry.scale + coverGeometry.offsetX},${point.y * coverGeometry.scale + coverGeometry.offsetY}`).join(" ")}
+                fill="rgba(16,185,129,0.10)"
+                stroke="#10b981"
+                strokeWidth={3}
+                strokeLinejoin="round"
+              />
+              {candidate.corners.map((point, index) => (
+                <circle
+                  key={index}
+                  cx={point.x * coverGeometry.scale + coverGeometry.offsetX}
+                  cy={point.y * coverGeometry.scale + coverGeometry.offsetY}
+                  r={7}
+                  fill="#10b981"
+                  stroke="white"
+                  strokeWidth={2}
+                />
+              ))}
+            </svg>
+          )}
+          {!ready && !cameraError && <p className="absolute inset-0 flex items-center justify-center text-sm text-white/70">{isArabic ? "جارٍ تشغيل الكاميرا…" : "Démarrage de la caméra…"}</p>}
+          {cameraError && <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 rounded-xl bg-neutral-900/95 p-4 text-center text-sm">{cameraError}</div>}
         </div>
       </main>
 
