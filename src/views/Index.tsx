@@ -284,6 +284,7 @@ const Index = () => {
     const newPreviews: string[] = [];
     const newBase64s: string[] = [];
     const newGroupSizes: number[] = [];
+    const qualityWarnings = new Set<string>();
     for (const file of files) {
       if (file.size > 10 * 1024 * 1024) {
         toast({ title: t.errorTitle, description: t.imageTooLarge, variant: "destructive" });
@@ -294,6 +295,7 @@ const Index = () => {
         toast({ title: t.errorTitle, description: lang === "ar" ? "تعذّر قراءة الصورة، جرّب صورة أخرى" : "Impossible de lire l'image", variant: "destructive" });
         continue;
       }
+      prepared.qualityWarnings.forEach((warning) => qualityWarnings.add(warning));
       // Show one preview per uploaded photo; send the full image plus selected detail crops.
       newPreviews.push(prepared.original);
       newBase64s.push(prepared.original.split(",")[1]);
@@ -306,6 +308,12 @@ const Index = () => {
     setImagePreviews((prev) => [...prev, ...newPreviews]);
     setImageBase64s((prev) => [...prev, ...newBase64s]);
     setImageGroupSizes((prev) => [...prev, ...newGroupSizes]);
+    if (qualityWarnings.size > 0) {
+      const warningText = lang === "ar"
+        ? "قد تكون الصورة ضعيفة الإضاءة أو التباين أو غير حادة. حاول وضع الورقة في إضاءة متوازنة وتثبيت الهاتف قبل الإرسال."
+        : "La photo semble peut-être sombre, peu contrastée ou floue. Utilisez une lumière uniforme et stabilisez le téléphone avant l’envoi.";
+      toast({ title: lang === "ar" ? "تنبيه حول جودة الصورة" : "Qualité de la photo", description: warningText });
+    }
     setImageReviewResult(null);
     setImageReviewDraft("");
     setImageReviewOpen(false);
