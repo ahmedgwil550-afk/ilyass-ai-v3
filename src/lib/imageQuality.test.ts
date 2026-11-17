@@ -5,7 +5,6 @@ const baseline = {
   brightness: 220,
   contrast: 48,
   sharpness: 35,
-  brightPixelRatio: 0.2,
 };
 
 describe("classifyDocumentPhoto", () => {
