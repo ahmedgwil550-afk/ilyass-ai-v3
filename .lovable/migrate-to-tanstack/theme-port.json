@@ -1,0 +1,23 @@
+{
+  "customizations": [
+    { "token": ".exam-mode", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".ai-action-btn", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".ai-response-card", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".answer-export-stage", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".answer-sheet", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".answer-sheet-body", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".answer-sheet-header", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".chat-input-area", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".code-block-header", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".code-block-wrapper", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".final-answer-block", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".glass-btn", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".glass-card", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".glass-icon-btn", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".katex direction rules", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".markdown-content", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".scrollbar-hide", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".smart-input-bar", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".typing-dot", "source": "src/index.css", "reappliedIn": "src/styles.css" }
+  ]
+}

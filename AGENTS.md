@@ -1,30 +1,10 @@
-<!-- LOVABLE:BEGIN -->
-> [!IMPORTANT]
-> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
-> published git history — force pushing, or rebasing/amending/squashing commits
-> that are already pushed — as it rewrites history on Lovable's side and the
-> user will likely lose their project history.
->
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
+# Architecture decisions
 
-## What Lovable manages
-
-Rules outside this block are the project's own. Change the pieces below in
-Lovable, not by hand. With the [Lovable MCP](https://mcp.lovable.dev)
-connected, `send_message` asks Lovable to do it; otherwise ask the user to
-use the editor.
-
-- **Database.** Do not add or edit `supabase/migrations/` or `drizzle/`.
-  Ask Lovable to change the schema.
-- **Generated files.** Do not edit a file whose header says it is automatically
-  generated.
-- **AI gateway.** Keep model calls on Lovable's gateway, and keep
-  `LOVABLE_API_KEY` out of browser code.
-- **Connectors.** Lovable provides native connectors. `list_connectors` shows
-  which are enabled; `add_connector` only returns the dashboard link. When a
-  connector is enabled, calls go through the connector gateway and need
-  `LOVABLE_API_KEY`. When Lovable does not provide one, users can bring their
-  own key and store it in Secrets.
-- **Secrets.** Lovable manages them. Do not put secret values in the repo.
-<!-- LOVABLE:END -->
+- Keep the authentication mascot's timeline, pointer tracking, and joint-anchored SVG rig in `AuthCharacter`; its parent passes only semantic state so typing and pointer events do not re-render the form or rig.
+- Use Framer Motion's frame scheduler for pose interpolation and a single requestAnimationFrame per pointer sample; this avoids competing render loops and preserves smooth cross-browser transforms.
+- AI endpoints live as TanStack server routes at src/routes/api.*.ts delegating to src/server-ai/*; they replaced the Supabase edge functions, and page components (src/views) render client-only because they rely on browser APIs.
+- Unlimited-use codes are verified only by server routes against the server-only UNLOCK_CODE secret, so no valid code is bundled into the browser.
+- Login, signup, and profile display details use the app's own Lovable Cloud auth (`account-client` re-exports the generated client); keep profile details in user metadata because the live schema has no public profiles table, and never point the app at an external backend.
+- Answer verification lives in `src/server-ai/verify/`. The answer streams to the student unchanged; when it ends, `withVerification` (stream.ts) appends a `<verification>` JSON block (types and codec in `src/lib/verification.ts`) before `[DONE]`, and `splitThinking` strips it so copy, export and the history sent to the server stay clean. Levels (`VERIFY_LEVEL=off|basic|standard|strict`, default by mode: fast=basic, accurate=standard, advanced=standard or strict by complexity, panache=strict): basic = free static checks; standard = a small model only transcribes claims (each must quote the answer verbatim or it is dropped) and `claims.ts` decides them numerically; strict = also an independent solve by a different model tier, compared on final results. Code, never a model, decides what is "wrong"; anything unverifiable is reported as not checked, and any verifier failure or timeout must never alter or block the answer. Prompts in `verify/prompts.ts` follow the template-literal rule (no backticks, `${`, or backslashes). Five concerns are covered: image reading (`reading.ts`: the first transcription is compared by code with an independent second reading of the photo, numbers/fractions/exponents/indices/units/symbols/table sizes; wildly divergent readings are reported as not checked, never as an accusation), solution checking (`claims.ts`), precise errors (every issue may carry `where` = verbatim snippet and `expected` = the recomputed value), completeness (question and sub-question labels in `static.ts`, plus a model-reported "missing" that code re-confirms against the answer's own numbering), and method/level conformity (`method` role, strict only, high-confidence quote-backed suggestions shown apart from evidence). Anything that could not be judged goes to `Verdict.unverified` and is shown as «تعذر التحقق»; never turn "could not verify" into a verdict.
+- Keep remote assistant tools in the app-hosted OAuth-protected MCP catalog and browser-local tools in page-owned WebMCP registrations; they have different trust boundaries and runtimes.
+- UI density: `src/lib/display-scale.ts` estimates a `--ui-scale` (1 to 1.3, phones only, never below 1) from the screen's short side in CSS px, or uses the student's manual choice from localStorage. An inline `<head>` script (`UI_SCALE_BOOT_SCRIPT`, kept identical to the TS functions by `display-scale.test.ts`) sets it before first paint; `UiScaleSync` keeps it applied. `html { font-size }` and the answer font multiply by it, so keep sizes in `rem` (not `px`) when you want them to follow it.

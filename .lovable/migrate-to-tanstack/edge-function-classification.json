@@ -1,0 +1,6 @@
+{"functions": [
+  {"name": "solve", "classification": "internal-only", "signal": "called from src/lib/streamChat.ts; replaced by /api/solve server route", "outcome": "migrated"},
+  {"name": "solve-pdf", "classification": "internal-only", "signal": "called from src/lib/streamPdf.ts; replaced by /api/solve-pdf server route", "outcome": "migrated"},
+  {"name": "solve-geometry", "classification": "internal-only", "signal": "called from src/lib/streamGeometry.ts; replaced by /api/solve-geometry server route", "outcome": "migrated"},
+  {"name": "annotate-sheet", "classification": "internal-only", "signal": "called from src/lib/annotateSheet.ts; replaced by /api/annotate-sheet server route", "outcome": "migrated"}
+]}

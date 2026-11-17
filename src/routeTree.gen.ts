@@ -10,33 +10,272 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CalculatorRouteImport } from './routes/calculator'
+import { Route as GeometryRouteImport } from './routes/geometry'
+import { Route as GraphingRouteImport } from './routes/graphing'
+import { Route as HistoryRouteImport } from './routes/history'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as ApiAnnotateSheetRouteImport } from './routes/api.annotate-sheet'
+import { Route as ApiAnswerFeedbackRouteImport } from './routes/api.answer-feedback'
+import { Route as ApiCurriculumIngestRouteImport } from './routes/api.curriculum-ingest'
+import { Route as ApiReadImageRouteImport } from './routes/api.read-image'
+import { Route as ApiSolveRouteImport } from './routes/api.solve'
+import { Route as ApiSolveGeometryRouteImport } from './routes/api.solve-geometry'
+import { Route as ApiSolvePdfRouteImport } from './routes/api.solve-pdf'
+import { Route as ApiUsageRouteImport } from './routes/api.usage'
+import { Route as ApiVerifyUnlockRouteImport } from './routes/api.verify-unlock'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalculatorRoute = CalculatorRouteImport.update({
+  id: '/calculator',
+  path: '/calculator',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GeometryRoute = GeometryRouteImport.update({
+  id: '/geometry',
+  path: '/geometry',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GraphingRoute = GraphingRouteImport.update({
+  id: '/graphing',
+  path: '/graphing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAnnotateSheetRoute = ApiAnnotateSheetRouteImport.update({
+  id: '/api/annotate-sheet',
+  path: '/api/annotate-sheet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAnswerFeedbackRoute = ApiAnswerFeedbackRouteImport.update({
+  id: '/api/answer-feedback',
+  path: '/api/answer-feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCurriculumIngestRoute = ApiCurriculumIngestRouteImport.update({
+  id: '/api/curriculum-ingest',
+  path: '/api/curriculum-ingest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiReadImageRoute = ApiReadImageRouteImport.update({
+  id: '/api/read-image',
+  path: '/api/read-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSolveRoute = ApiSolveRouteImport.update({
+  id: '/api/solve',
+  path: '/api/solve',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSolveGeometryRoute = ApiSolveGeometryRouteImport.update({
+  id: '/api/solve-geometry',
+  path: '/api/solve-geometry',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSolvePdfRoute = ApiSolvePdfRouteImport.update({
+  id: '/api/solve-pdf',
+  path: '/api/solve-pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUsageRoute = ApiUsageRouteImport.update({
+  id: '/api/usage',
+  path: '/api/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVerifyUnlockRoute = ApiVerifyUnlockRouteImport.update({
+  id: '/api/verify-unlock',
+  path: '/api/verify-unlock',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/calculator': typeof CalculatorRoute
+  '/geometry': typeof GeometryRoute
+  '/graphing': typeof GraphingRoute
+  '/history': typeof HistoryRoute
+  '/mcp': typeof McpRoute
+  '/profile': typeof ProfileRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api/annotate-sheet': typeof ApiAnnotateSheetRoute
+  '/api/answer-feedback': typeof ApiAnswerFeedbackRoute
+  '/api/curriculum-ingest': typeof ApiCurriculumIngestRoute
+  '/api/read-image': typeof ApiReadImageRoute
+  '/api/solve': typeof ApiSolveRoute
+  '/api/solve-geometry': typeof ApiSolveGeometryRoute
+  '/api/solve-pdf': typeof ApiSolvePdfRoute
+  '/api/usage': typeof ApiUsageRoute
+  '/api/verify-unlock': typeof ApiVerifyUnlockRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/calculator': typeof CalculatorRoute
+  '/geometry': typeof GeometryRoute
+  '/graphing': typeof GraphingRoute
+  '/history': typeof HistoryRoute
+  '/mcp': typeof McpRoute
+  '/profile': typeof ProfileRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api/annotate-sheet': typeof ApiAnnotateSheetRoute
+  '/api/answer-feedback': typeof ApiAnswerFeedbackRoute
+  '/api/curriculum-ingest': typeof ApiCurriculumIngestRoute
+  '/api/read-image': typeof ApiReadImageRoute
+  '/api/solve': typeof ApiSolveRoute
+  '/api/solve-geometry': typeof ApiSolveGeometryRoute
+  '/api/solve-pdf': typeof ApiSolvePdfRoute
+  '/api/usage': typeof ApiUsageRoute
+  '/api/verify-unlock': typeof ApiVerifyUnlockRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/calculator': typeof CalculatorRoute
+  '/geometry': typeof GeometryRoute
+  '/graphing': typeof GraphingRoute
+  '/history': typeof HistoryRoute
+  '/mcp': typeof McpRoute
+  '/profile': typeof ProfileRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api/annotate-sheet': typeof ApiAnnotateSheetRoute
+  '/api/answer-feedback': typeof ApiAnswerFeedbackRoute
+  '/api/curriculum-ingest': typeof ApiCurriculumIngestRoute
+  '/api/read-image': typeof ApiReadImageRoute
+  '/api/solve': typeof ApiSolveRoute
+  '/api/solve-geometry': typeof ApiSolveGeometryRoute
+  '/api/solve-pdf': typeof ApiSolvePdfRoute
+  '/api/usage': typeof ApiUsageRoute
+  '/api/verify-unlock': typeof ApiVerifyUnlockRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/calculator'
+    | '/geometry'
+    | '/graphing'
+    | '/history'
+    | '/mcp'
+    | '/profile'
+    | '/.well-known/oauth-protected-resource'
+    | '/api/annotate-sheet'
+    | '/api/answer-feedback'
+    | '/api/curriculum-ingest'
+    | '/api/read-image'
+    | '/api/solve'
+    | '/api/solve-geometry'
+    | '/api/solve-pdf'
+    | '/api/usage'
+    | '/api/verify-unlock'
+    | '/.lovable/oauth/consent'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/calculator'
+    | '/geometry'
+    | '/graphing'
+    | '/history'
+    | '/mcp'
+    | '/profile'
+    | '/.well-known/oauth-protected-resource'
+    | '/api/annotate-sheet'
+    | '/api/answer-feedback'
+    | '/api/curriculum-ingest'
+    | '/api/read-image'
+    | '/api/solve'
+    | '/api/solve-geometry'
+    | '/api/solve-pdf'
+    | '/api/usage'
+    | '/api/verify-unlock'
+    | '/.lovable/oauth/consent'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/calculator'
+    | '/geometry'
+    | '/graphing'
+    | '/history'
+    | '/mcp'
+    | '/profile'
+    | '/.well-known/oauth-protected-resource'
+    | '/api/annotate-sheet'
+    | '/api/answer-feedback'
+    | '/api/curriculum-ingest'
+    | '/api/read-image'
+    | '/api/solve'
+    | '/api/solve-geometry'
+    | '/api/solve-pdf'
+    | '/api/usage'
+    | '/api/verify-unlock'
+    | '/.lovable/oauth/consent'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
+  CalculatorRoute: typeof CalculatorRoute
+  GeometryRoute: typeof GeometryRoute
+  GraphingRoute: typeof GraphingRoute
+  HistoryRoute: typeof HistoryRoute
+  McpRoute: typeof McpRoute
+  ProfileRoute: typeof ProfileRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  ApiAnnotateSheetRoute: typeof ApiAnnotateSheetRoute
+  ApiAnswerFeedbackRoute: typeof ApiAnswerFeedbackRoute
+  ApiCurriculumIngestRoute: typeof ApiCurriculumIngestRoute
+  ApiReadImageRoute: typeof ApiReadImageRoute
+  ApiSolveRoute: typeof ApiSolveRoute
+  ApiSolveGeometryRoute: typeof ApiSolveGeometryRoute
+  ApiSolvePdfRoute: typeof ApiSolvePdfRoute
+  ApiUsageRoute: typeof ApiUsageRoute
+  ApiVerifyUnlockRoute: typeof ApiVerifyUnlockRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +287,156 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculator': {
+      id: '/calculator'
+      path: '/calculator'
+      fullPath: '/calculator'
+      preLoaderRoute: typeof CalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/geometry': {
+      id: '/geometry'
+      path: '/geometry'
+      fullPath: '/geometry'
+      preLoaderRoute: typeof GeometryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/graphing': {
+      id: '/graphing'
+      path: '/graphing'
+      fullPath: '/graphing'
+      preLoaderRoute: typeof GraphingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/annotate-sheet': {
+      id: '/api/annotate-sheet'
+      path: '/api/annotate-sheet'
+      fullPath: '/api/annotate-sheet'
+      preLoaderRoute: typeof ApiAnnotateSheetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/answer-feedback': {
+      id: '/api/answer-feedback'
+      path: '/api/answer-feedback'
+      fullPath: '/api/answer-feedback'
+      preLoaderRoute: typeof ApiAnswerFeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/curriculum-ingest': {
+      id: '/api/curriculum-ingest'
+      path: '/api/curriculum-ingest'
+      fullPath: '/api/curriculum-ingest'
+      preLoaderRoute: typeof ApiCurriculumIngestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/read-image': {
+      id: '/api/read-image'
+      path: '/api/read-image'
+      fullPath: '/api/read-image'
+      preLoaderRoute: typeof ApiReadImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/solve': {
+      id: '/api/solve'
+      path: '/api/solve'
+      fullPath: '/api/solve'
+      preLoaderRoute: typeof ApiSolveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/solve-geometry': {
+      id: '/api/solve-geometry'
+      path: '/api/solve-geometry'
+      fullPath: '/api/solve-geometry'
+      preLoaderRoute: typeof ApiSolveGeometryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/solve-pdf': {
+      id: '/api/solve-pdf'
+      path: '/api/solve-pdf'
+      fullPath: '/api/solve-pdf'
+      preLoaderRoute: typeof ApiSolvePdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/usage': {
+      id: '/api/usage'
+      path: '/api/usage'
+      fullPath: '/api/usage'
+      preLoaderRoute: typeof ApiUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/verify-unlock': {
+      id: '/api/verify-unlock'
+      path: '/api/verify-unlock'
+      fullPath: '/api/verify-unlock'
+      preLoaderRoute: typeof ApiVerifyUnlockRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
+  CalculatorRoute: CalculatorRoute,
+  GeometryRoute: GeometryRoute,
+  GraphingRoute: GraphingRoute,
+  HistoryRoute: HistoryRoute,
+  McpRoute: McpRoute,
+  ProfileRoute: ProfileRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  ApiAnnotateSheetRoute: ApiAnnotateSheetRoute,
+  ApiAnswerFeedbackRoute: ApiAnswerFeedbackRoute,
+  ApiCurriculumIngestRoute: ApiCurriculumIngestRoute,
+  ApiReadImageRoute: ApiReadImageRoute,
+  ApiSolveRoute: ApiSolveRoute,
+  ApiSolveGeometryRoute: ApiSolveGeometryRoute,
+  ApiSolvePdfRoute: ApiSolvePdfRoute,
+  ApiUsageRoute: ApiUsageRoute,
+  ApiVerifyUnlockRoute: ApiVerifyUnlockRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

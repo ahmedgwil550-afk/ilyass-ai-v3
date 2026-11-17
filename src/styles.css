@@ -1,155 +1,691 @@
-/*
- * Tailwind v4 entry: config lives here, with no tailwind.config.js or PostCSS plugin.
- * - Keep every @import in this top block, above @theme and the rest of the file. Install an
- *   npm package before @importing its CSS. Never @import a remote URL (web fonts, CDN CSS): the
- *   build resolves @import from the filesystem. Load those with a <link> in the head() of
- *   src/routes/__root.tsx and name the family in a --font-* token in @theme inline below.
- */
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Design system definition.
- *
- * The design lives in this file: oklch color tokens on the shadcn variables
- * (--background, --foreground, --primary, --secondary, --muted, --accent, ...) plus
- * new tokens as needed, font tokens, and custom styles and animations.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
- */
-
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-ring-offset-background: var(--background);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --font-sans: "Inter", sans-serif;
+
+  /* مقياس خط أكبر قليلاً من الافتراضي: سهل القراءة على الجوال دون zoom (يغيّر الخط فقط لا الهوامش) */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5rem;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.7rem;
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: 1.8rem;
 }
 
-:root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+/* نظام كثافة الشاشة: --ui-scale يضبطه src/lib/display-scale.ts (سكربت <head> ثم UiScaleSync).
+   يضرب حجم خط الجذر فيكبر كل ما هو بوحدة rem معاً (النصوص والهوامش والأيقونات). القيمة 1 = بلا تغيير. */
+html {
+  font-size: calc(100% * var(--ui-scale, 1));
 }
 
-.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 220 40% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 40% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 40% 8%;
+
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 258 90% 66%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 239 84% 67%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 239 84% 67%;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 210 40% 98%;
+
+    --card: 0 0% 7%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 0 0% 7%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 258 90% 66%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 10%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
+    --ring: 239 84% 67%;
+
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 0 0% 12%;
+    --sidebar-ring: 239 84% 67%;
+  }
+
+  /* Exam Mode overrides */
+  .exam-mode {
+    --primary: 25 95% 53%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 25 95% 53%;
+    --sidebar-primary: 25 95% 53%;
+    --sidebar-ring: 25 95% 53%;
+  }
+
+  .dark.exam-mode {
+    --primary: 32 95% 55%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 32 95% 55%;
+    --sidebar-primary: 32 95% 55%;
+    --sidebar-ring: 32 95% 55%;
+  }
+
+
+/* Typing indicator */
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
 }
+
+.typing-dot {
+  @apply inline-block h-2 w-2 rounded-full bg-primary;
+  animation: typingBounce 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
 @layer base {
   * {
-    border-color: var(--color-border);
+    @apply border-border;
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+  }
+}
+
+/* ChatGPT Style Buttons */
+.glass-btn {
+  @apply relative overflow-hidden rounded-full px-5 py-2.5 text-sm font-medium transition-all duration-200;
+  background-color: hsl(0 0% 15%);
+  border: 1px solid hsl(0 0% 20%);
+  color: hsl(210 40% 98%);
+}
+
+.glass-btn:hover {
+  background-color: hsl(0 0% 20%);
+  transform: scale(1.02);
+}
+
+.glass-btn:active {
+  transform: scale(0.98);
+}
+
+/* Glass card style */
+.glass-card {
+  background-color: hsl(0 0% 8%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsl(0 0% 15%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Glass icon button - Circular like ChatGPT */
+.glass-icon-btn {
+  @apply flex items-center justify-center rounded-full transition-all duration-200;
+  background-color: hsl(0 0% 15%);
+  border: 1px solid hsl(0 0% 20%);
+  color: hsl(210 40% 98%);
+}
+
+.glass-icon-btn:hover {
+  background-color: hsl(0 0% 20%);
+  transform: scale(1.05);
+}
+
+.glass-icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* Darker Input Area */
+.chat-input-area {
+  background-color: hsl(0 0% 9%);
+  border: 1px solid hsl(0 0% 15%);
+}
+
+/* KaTeX overrides for better styling */
+.katex-display {
+  @apply my-4 overflow-x-auto;
+}
+
+.katex {
+  font-size: 1.1em !important;
+}
+
+/* Markdown content styling */
+.markdown-content h1 { @apply text-2xl font-bold mt-6 mb-3; }
+.markdown-content h2 { @apply text-xl font-bold mt-5 mb-2; }
+.markdown-content h3 { @apply text-lg font-semibold mt-4 mb-2; }
+.markdown-content p { @apply my-2 leading-relaxed; }
+.markdown-content ul { @apply list-disc pl-6 my-2; }
+.markdown-content ol { @apply list-decimal pl-6 my-2; }
+.markdown-content li { @apply my-1; }
+.markdown-content code { @apply bg-muted px-1.5 py-0.5 rounded text-sm; }
+.markdown-content pre { @apply bg-transparent p-0 my-0; }
+.markdown-content pre code { @apply bg-transparent p-0; }
+.markdown-content blockquote { @apply border-l-4 border-primary pl-4 my-3 italic; }
+.markdown-content table { @apply w-full border-collapse my-3; }
+.markdown-content th, .markdown-content td { @apply border border-border px-3 py-2 text-left; }
+.markdown-content th { @apply bg-muted font-semibold; }
+
+/* Code block ChatGPT style */
+.code-block-wrapper {
+  @apply shadow-sm;
+}
+.code-block-header {
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+/* Final answer highlight */
+.final-answer-block {
+  box-shadow: 0 4px 15px -3px hsl(var(--primary) / 0.3);
+}
+
+/* AI Response Card - Professional dark style */
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ai-response-card {
+  /* بلا إطار ولا بطاقة: النص مباشرة على الخلفية */
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  animation: cardFadeIn 0.3s ease-out;
+}
+
+.dark .ai-response-card {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.dark .ai-response-card .markdown-content,
+.dark .ai-response-card .markdown-content p,
+.dark .ai-response-card .markdown-content li,
+.dark .ai-response-card .markdown-content td,
+.dark .ai-response-card .markdown-content th,
+.dark .ai-response-card .markdown-content h1,
+.dark .ai-response-card .markdown-content h2,
+.dark .ai-response-card .markdown-content h3,
+.dark .ai-response-card .markdown-content strong { color: #fff; }
+
+/* فاصل واضح بين التمارين والأسئلة */
+.markdown-content hr {
+  border: 0;
+  height: 1px;
+  margin: 2.25rem 0;
+  background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.45), transparent);
+}
+.markdown-content h2 { margin-top: 2.25rem; }
+.markdown-content p { margin-top: 0.9rem; margin-bottom: 0.9rem; line-height: 1.85; }
+
+/* شريط الإدخال: Liquid Glass — زجاج مصبوغ شفاف، بلا حد أبيض */
+.glass-input-bar {
+  background:
+    linear-gradient(180deg, hsl(0 0% 100% / 0.10), hsl(0 0% 100% / 0.04)),
+    hsl(30 8% 22% / 0.55);
+  -webkit-backdrop-filter: blur(32px) saturate(190%) brightness(1.05);
+  backdrop-filter: blur(32px) saturate(190%) brightness(1.05);
+  border: 0;
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px hsl(0 0% 100% / 0.16),
+    inset 0 -8px 16px hsl(0 0% 0% / 0.12);
+}
+.glass-input-bar:focus-within {
+  background:
+    linear-gradient(180deg, hsl(0 0% 100% / 0.13), hsl(0 0% 100% / 0.05)),
+    hsl(30 8% 24% / 0.62);
+}
+.glass-input-bar .glass-circle {
+  background: hsl(0 0% 100% / 0.07);
+  box-shadow: inset 0 1px 1px hsl(0 0% 100% / 0.14);
+}
+.glass-input-bar .glass-circle:hover { background: hsl(0 0% 100% / 0.13); }
+
+/* Quick action buttons - professional style */
+.ai-action-btn {
+  @apply flex-1 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: none;
+}
+.ai-action-btn:hover {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  transform: scale(1.05);
+}
+.ai-action-btn:active {
+  transform: scale(0.95);
+}
+
+.dark .ai-action-btn {
+  background: hsl(240 20% 15%);
+  color: hsl(0 0% 100%);
+}
+.dark .ai-action-btn:hover {
+  background: hsl(var(--primary));
+}
+
+/* Smart Input Bar */
+.smart-input-bar {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.smart-input-bar:focus-within {
+  border-color: hsl(var(--primary) / 0.4);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2), 0 0 0 2px hsl(var(--primary) / 0.15) !important;
+}
+
+/* Hide scrollbar for suggestion chips */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Off-screen exam sheet used for answer PNG export */
+.answer-export-stage { position: fixed; left: -10000px; top: 0; pointer-events: none; }
+.answer-sheet { width: 820px; background: #fff; color: #111; padding: 40px 48px; font-family: Georgia, "Times New Roman", serif; }
+.answer-sheet * { color: #111 !important; }
+.answer-sheet-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 24px; font-size: 20px; }
+.answer-sheet-body { font-size: 16px; line-height: 1.7; }
+
+/* ILYASS AI answer typography: controlled per user, ChatGPT-inspired */
+.markdown-content {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  font-weight: 400;
+  font-size: calc(var(--answer-font-size, 18px) * var(--ui-scale, 1));
+  line-height: 1.72;
+  overflow-wrap: anywhere;
+}
+.markdown-content p,
+.markdown-content li {
+  font-weight: 400;
+  letter-spacing: 0; /* أي تباعد سالب يفكّك اتصال حروف العربية */
+  font-size: 1em;
+}
+.markdown-content h1 { font-size: 1.55em; line-height: 1.3; font-weight: 700; }
+.markdown-content h2 { font-size: 1.38em; line-height: 1.35; font-weight: 700; }
+.markdown-content h3 { font-size: 1.2em; line-height: 1.4; font-weight: 600; }
+.markdown-content .katex { font-size: 1.16em !important; font-weight: 400 !important; }
+.markdown-content .katex *, .final-answer-block .katex, .final-answer-block .katex * { font-weight: 400 !important; }
+.markdown-content .katex-display { margin: 1.1em 0 !important; padding: 4px 0; overflow-x: auto; overflow-y: hidden; font-size: 1em; }
+@media (max-width: 640px) {
+  .markdown-content { line-height: 1.68; }
+  .markdown-content h1 { font-size: 1.42em; }
+  .markdown-content h2 { font-size: 1.3em; }
+}
+
+/* Keep equations left-to-right even inside Arabic answers. */
+.katex,
+.katex-display,
+.katex-html {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Determine paragraph direction from its own text. */
+.markdown-content p,
+.markdown-content li {
+  unicode-bidi: plaintext;
+}
+
+
+/* iOS Liquid Glass answer-font slider */
+.font-slider {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 58px;
+  padding: 0 40px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  background: hsl(var(--muted) / 0.35);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.font-slider:focus-visible { box-shadow: 0 0 0 2px hsl(var(--primary) / 0.6); }
+.font-slider__track { position: relative; width: 100%; height: 100%; }
+.font-slider__line,
+.font-slider__fill {
+  position: absolute;
+  top: 50%;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: 9999px;
+}
+.font-slider__line { left: -6px; right: -6px; background: hsl(var(--muted-foreground) / 0.28); }
+/* التعبئة من جهة الصغير (اليمين) حتى المؤشر */
+.font-slider__fill { right: -6px; background: #0a84ff; transition: left 0.22s cubic-bezier(.3,.9,.3,1); }
+.font-slider[data-dragging] .font-slider__fill { transition: none; }
+.font-slider__ticks span {
+  position: absolute;
+  top: calc(50% + 16px);
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: hsl(var(--muted-foreground) / 0.5);
+  transform: translateX(-50%);
+}
+.font-slider__thumb {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 28px;
+  margin: -14px 0 0 -21px;
+  border-radius: 9999px;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.4), 0 0 0 0.5px rgb(0 0 0 / 0.15);
+  transition: left 0.22s cubic-bezier(.3,.9,.3,1), width 0.28s cubic-bezier(.3,1.5,.5,1), height 0.28s cubic-bezier(.3,1.5,.5,1),
+    margin 0.28s cubic-bezier(.3,1.5,.5,1), background 0.2s, color 0.2s, box-shadow 0.2s;
+  pointer-events: none;
+}
+.font-slider__thumb b { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; transition: opacity 0.15s; }
+/* أثناء اللمس: كبسولة زجاجية كبيرة تتبع الإصبع مباشرة */
+.font-slider[data-dragging] .font-slider__thumb {
+  width: 84px;
+  height: 50px;
+  margin: -25px 0 0 -42px;
+  background: rgb(70 70 76 / 0.28);
+  -webkit-backdrop-filter: blur(3px) saturate(1.8) brightness(1.15);
+  backdrop-filter: blur(3px) saturate(1.8) brightness(1.15);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.38), inset 0 0 0 1.2px rgb(255 255 255 / 0.28),
+    inset 0 2px 5px rgb(255 255 255 / 0.22), inset 0 -3px 8px rgb(255 255 255 / 0.08);
+  transition: left 0s, width 0.28s cubic-bezier(.3,1.5,.5,1), height 0.28s cubic-bezier(.3,1.5,.5,1),
+    margin 0.28s cubic-bezier(.3,1.5,.5,1), background 0.2s, box-shadow 0.2s;
+}
+.font-slider[data-dragging] .font-slider__thumb b { opacity: 0; }
+
+/* Compact idle composer that expands smoothly on focus. */
+.chatgpt-composer {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 280px !important;
+  max-width: calc(100% - 48px) !important;
+  margin-inline: auto !important;
+  height: 38px;
+  min-height: 38px !important;
+  max-height: 35dvh !important;
+  gap: 4px !important;
+  padding: 4px 6px !important;
+  overflow: visible !important;
+  border-radius: 22px !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018)),
+    rgba(43, 43, 43, 0.78) !important;
+  border: 1px solid rgba(255,255,255,.105) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(155%) !important;
+  backdrop-filter: blur(24px) saturate(155%) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.09), inset 0 -1px 0 rgba(0,0,0,.18) !important;
+  transform: translateX(0) translateY(0);
+  transition:
+    width 300ms cubic-bezier(.2,.75,.25,1),
+    height 220ms cubic-bezier(.2,.75,.25,1),
+    transform 300ms cubic-bezier(.2,.75,.25,1),
+    border-radius 180ms ease,
+    box-shadow 180ms ease !important;
+}
+@keyframes composerExpandNudge {
+  0% { transform: translateX(0) translateY(-1px); }
+  35% { transform: translateX(3px) translateY(-2px); }
+  70% { transform: translateX(-2px) translateY(-2px); }
+  100% { transform: translateX(0) translateY(-2px); }
+}
+.chatgpt-composer.composer-is-focused {
+  width: min(520px, calc(100% - 32px)) !important;
+  transform: translateY(-2px);
+  animation: composerExpandNudge 420ms ease-out;
+}
+.chatgpt-composer:focus-within {
+  background-color: rgba(47,47,47,.82) !important;
+  border-color: rgba(255,255,255,.13) !important;
+}
+.chatgpt-composer > div:first-child {
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  min-width: 24px !important;
+}
+.chatgpt-composer .chatgpt-composer-plus,
+.chatgpt-composer .chatgpt-composer-action {
+  box-sizing: border-box !important;
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+}
+.chatgpt-composer .chatgpt-composer-plus svg {
+  width: 17px !important;
+  height: 17px !important;
+}
+.chatgpt-composer .chatgpt-composer-action svg {
+  width: 15px !important;
+  height: 15px !important;
+}
+.chatgpt-composer.composer-is-focused > div:first-child,
+.chatgpt-composer.composer-is-focused .chatgpt-composer-plus,
+.chatgpt-composer.composer-is-focused .chatgpt-composer-action {
+  flex-basis: 28px !important;
+  width: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+}
+.chatgpt-composer.composer-is-focused .chatgpt-composer-plus svg { width: 19px !important; height: 19px !important; }
+.chatgpt-composer.composer-is-focused .chatgpt-composer-action svg { width: 16px !important; height: 16px !important; }
+.chatgpt-composer > .chatgpt-composer-textarea {
+  box-sizing: border-box !important;
+  flex: 1 1 0% !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  height: 20px;
+  min-height: 20px !important;
+  max-height: calc(35dvh - 16px) !important;
+  align-self: center !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 1px 2px !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden;
+  resize: none !important;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px !important;
+  line-height: 18px !important;
+  color: #f7f7f8 !important;
+  scrollbar-width: thin;
+  transition: height 160ms ease-out !important;
+}
+.chatgpt-composer > .chatgpt-composer-textarea::placeholder {
+  color: rgb(245 245 245 / 48%) !important;
+  opacity: 1;
+}
+.chatgpt-composer .chatgpt-composer-plus,
+.chatgpt-composer .chatgpt-composer-action {
+  align-self: center !important;
+  margin-bottom: 0 !important;
+}
+.chatgpt-composer.composer-is-focused > .chatgpt-composer-textarea {
+  font-size: 14px !important;
+  line-height: 20px !important;
+  min-height: 24px !important;
+}
+@media (max-width: 480px) {
+  .chatgpt-composer {
+    width: 260px !important;
+    max-width: calc(100% - 48px) !important;
+  }
+  .chatgpt-composer.composer-is-focused {
+    width: calc(100% - 32px) !important;
+    max-width: 520px !important;
+  }
+}
+
+/* iOS Safari: prevent focus zoom by keeping form controls at 16px or larger. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select,
+  .chatgpt-composer > .chatgpt-composer-textarea,
+  .chatgpt-composer.composer-is-focused > .chatgpt-composer-textarea {
+    font-size: 16px !important;
+  }
+}
+
+
+/* ILYASS metal composer finish: slightly roomier idle state and richer glass-metal surface. */
+.chatgpt-composer {
+  width: 320px !important;
+  min-height: 46px !important;
+  height: auto !important;
+  padding: 6px 8px !important;
+  gap: 6px !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(120% 150% at 12% 0%, rgba(255,255,255,.13), transparent 48%),
+    linear-gradient(145deg, rgba(75,75,78,.88), rgba(31,31,33,.94) 58%, rgba(54,54,57,.9)) !important;
+  border: 1px solid rgba(255,255,255,.17) !important;
+  box-shadow:
+    0 5px 18px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.16),
+    inset 0 -1px 0 rgba(0,0,0,.24) !important;
+}
+.chatgpt-composer.composer-is-focused {
+  width: min(540px, calc(100% - 28px)) !important;
+  min-height: 54px !important;
+  border-color: rgba(190,170,255,.42) !important;
+  box-shadow:
+    0 8px 26px rgba(0,0,0,.34),
+    0 0 0 1px rgba(170,145,255,.10),
+    inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+.chatgpt-composer:focus-within {
+  background:
+    radial-gradient(120% 150% at 12% 0%, rgba(255,255,255,.17), transparent 48%),
+    linear-gradient(145deg, rgba(82,78,91,.94), rgba(34,33,39,.97) 58%, rgba(58,55,68,.94)) !important;
+}
+.chatgpt-composer > .chatgpt-composer-textarea {
+  min-height: 26px !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+}
+.chatgpt-composer.composer-is-focused > .chatgpt-composer-textarea {
+  min-height: 28px !important;
+}
+@media (max-width: 480px) {
+  .chatgpt-composer {
+    width: 290px !important;
+    max-width: calc(100% - 32px) !important;
+  }
+  .chatgpt-composer.composer-is-focused {
+    width: calc(100% - 24px) !important;
+    max-width: 540px !important;
   }
 }

@@ -1,0 +1,22 @@
+/* لمعان يمرّ على نص "يفكّر…" */
+@keyframes thinking-shimmer {
+  0%   { background-position: 220% 0; }
+  100% { background-position: -120% 0; }
+}
+.thinking-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    hsl(var(--muted-foreground, 220 9% 60%)) 38%,
+    hsl(var(--foreground, 0 0% 100%)) 50%,
+    hsl(var(--muted-foreground, 220 9% 60%)) 62%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: thinking-shimmer 2.2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .thinking-shimmer { animation: none; }
+}

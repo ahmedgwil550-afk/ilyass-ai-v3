@@ -1,0 +1,284 @@
+/* الأرقام والمعادلات دائماً من اليسار لليمين حتى داخل فقرة عربية (يمنع تخربط الترتيب) */
+.markdown-content .katex,
+.markdown-content .katex-html,
+.markdown-content .katex-display {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.markdown-content .katex-display {
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+.markdown-content p { margin: 0.75rem 0; }
+
+.markdown-content strong,
+.markdown-content b {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+.markdown-content .final-answer-block p,
+.markdown-content .final-answer-block strong {
+  font-weight: 600;
+}
+.markdown-content .final-answer-block .katex,
+.markdown-content .final-answer-block .katex *,
+.markdown-content strong .katex,
+.markdown-content strong .katex * {
+  font-weight: 700 !important;
+}
+
+
+/* Markdown/GFM tables: responsive, theme-aware and readable on mobile */
+.markdown-content {
+  min-width: 0;
+  max-width: 100%;
+}
+.markdown-content .expandable-table {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border-color: hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+.markdown-content .markdown-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.94em;
+  line-height: 1.55;
+  text-align: start;
+  color: inherit;
+}
+.markdown-content .markdown-table th,
+.markdown-content .markdown-table td {
+  min-width: 5.5rem;
+  max-width: 24rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid hsl(var(--border));
+  border-inline-end: 1px solid hsl(var(--border));
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.markdown-content .markdown-table th {
+  background: hsl(var(--muted) / 0.72);
+  font-weight: 650;
+  color: hsl(var(--foreground));
+  white-space: normal;
+}
+.markdown-content .markdown-table tr:last-child td { border-bottom: 0; }
+.markdown-content .markdown-table th:last-child,
+.markdown-content .markdown-table td:last-child { border-inline-end: 0; }
+.markdown-content .markdown-table tr:nth-child(even) td {
+  background: hsl(var(--muted) / 0.18);
+}
+.markdown-content .expandable-table-scroll {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.5) transparent;
+}
+.markdown-content .expandable-table-scroll::-webkit-scrollbar { height: 7px; }
+.markdown-content .expandable-table-scroll::-webkit-scrollbar-track { background: transparent; }
+.markdown-content .expandable-table-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.45);
+  border-radius: 999px;
+}
+.markdown-content .expandable-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.7);
+}
+@media (max-width: 640px) {
+  .markdown-content .markdown-table th,
+  .markdown-content .markdown-table td { padding: 0.6rem 0.7rem; min-width: 6.25rem; }
+}
+
+/* جدول بشكل ChatGPT: بلا إطار، خطوط أفقية رفيعة، العمود الأول غليظ، مسافات واسعة */
+.markdown-content table.md-table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+  font-size: 0.95em;
+}
+.markdown-content table.md-table th,
+.markdown-content table.md-table td {
+  border: 0;
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+  padding: 0.9rem 1.1rem;
+  vertical-align: middle;
+  max-width: 24rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.markdown-content table.md-table .katex {
+  white-space: nowrap;
+}
+.markdown-content table.md-table--math th,
+.markdown-content table.md-table--math td {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  max-width: none;
+}
+.markdown-content table.md-table thead th { border-bottom-color: hsl(var(--border)); font-weight: 600; }
+.markdown-content table.md-table tbody tr:last-child td { border-bottom: 0; }
+.markdown-content table.md-table td:first-child,
+.markdown-content table.md-table th:first-child { font-weight: 600; }
+.markdown-content table.md-table .katex { font-size: 1.05em; }
+.markdown-content table.md-table td:first-child .katex { font-weight: 400 !important; }
+
+/* ---------- tableau de signes / de variations: شكل مدرسي مع خط فاصل للعمود الأول والصف الأول ---------- */
+.markdown-content .math-table-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; min-width: 0; }
+.markdown-content .math-table-chip {
+  font-size: 0.78rem; font-weight: 600; padding: 0.2rem 0.65rem; border-radius: 999px;
+  background: hsl(var(--primary) / 0.14); color: hsl(var(--primary));
+}
+.markdown-content .math-table-font {
+  display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: hsl(var(--muted-foreground));
+}
+.markdown-content .math-table-font button {
+  display: inline-flex; align-items: center; justify-content: center; width: 1.9rem; height: 1.9rem;
+  border: 1px solid hsl(var(--border)); border-radius: 0.55rem; background: transparent; color: inherit;
+}
+.markdown-content .math-table-font button:hover:not(:disabled) { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.markdown-content .math-table-font button:disabled { opacity: 0.35; }
+.markdown-content .math-table-font span { min-width: 2.6rem; text-align: center; }
+
+.markdown-content table.md-table--math { direction: ltr; text-align: center; border-collapse: collapse; }
+.markdown-content table.md-table--math th,
+.markdown-content table.md-table--math td {
+  text-align: center; border-bottom: 0; padding: 0.6rem 0.5rem; min-width: 2.3rem;
+}
+.markdown-content table.md-table--math th:first-child,
+.markdown-content table.md-table--math td:first-child {
+  border-inline-end: 2px solid hsl(var(--foreground) / 0.75); font-weight: 400; padding-inline: 0.8rem;
+}
+.markdown-content table.md-table--math thead th { border-bottom: 2px solid hsl(var(--foreground) / 0.75); font-weight: 400; }
+.markdown-content table.md-table--math tbody tr + tr td { border-top: 1px solid hsl(var(--border) / 0.7); }
+
+/* ---------- Rich Answer UI: أقسام، معادلات، خطوات ---------- */
+.rich-answer { width: 100%; }
+.answer-section + .answer-section { margin-top: 0.9rem; }
+.answer-section > .markdown-content > :first-child { margin-top: 0; }
+.answer-section--question {
+  border-inline-start: 3px solid hsl(var(--primary) / 0.55);
+  padding-inline-start: 0.85rem;
+  margin-top: 1.1rem;
+}
+.answer-section--question:first-child { margin-top: 0; }
+.answer-section--question > .markdown-content > :is(h1, h2, h3):first-child { font-size: 1.12em; }
+
+.math-block { display: block; max-width: 100%; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+.math-block > .katex-display { overflow: visible; }
+
+.markdown-content ol.step-block {
+  list-style: none;
+  padding: 0;
+  margin: 0.7rem 0;
+  counter-reset: step;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.markdown-content ol.step-block > li {
+  counter-increment: step;
+  position: relative;
+  margin: 0;
+  padding-inline-start: 2.4rem;
+  min-height: 1.8rem;
+}
+.markdown-content ol.step-block > li::before {
+  content: counter(step);
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.05em;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--primary));
+}
+
+
+/* ---------- جداول التقدم الكيميائي: بنية مدرسية واضحة للجداول العريضة ---------- */
+.markdown-content table.md-table--advancement {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.markdown-content table.md-table--advancement th,
+.markdown-content table.md-table--advancement td {
+  min-width: 6.25rem;
+  max-width: 22rem;
+  padding: 0.8rem 1rem;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  border-inline-end: 1px solid hsl(var(--border) / 0.7);
+  border-bottom: 1px solid hsl(var(--border) / 0.7);
+}
+.markdown-content table.md-table--advancement thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  font-weight: 650;
+  border-bottom: 2px solid hsl(var(--border));
+}
+.markdown-content table.md-table--advancement th:first-child,
+.markdown-content table.md-table--advancement td:first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 2;
+  min-width: 7rem;
+  font-weight: 650;
+  background: hsl(var(--card));
+  border-inline-end: 2px solid hsl(var(--border));
+}
+.markdown-content table.md-table--advancement thead th:first-child {
+  z-index: 4;
+  background: hsl(var(--muted));
+}
+.markdown-content table.md-table--advancement tbody tr:nth-child(even) td {
+  background: hsl(var(--muted) / 0.22);
+}
+.markdown-content table.md-table--advancement tbody tr:nth-child(even) td:first-child {
+  background: hsl(var(--muted));
+}
+.markdown-content table.md-table--advancement tr:last-child td {
+  border-bottom: 0;
+}
+.markdown-content table.md-table--advancement th:last-child,
+.markdown-content table.md-table--advancement td:last-child {
+  border-inline-end: 0;
+}
+@media (max-width: 640px) {
+  .markdown-content table.md-table--advancement th,
+  .markdown-content table.md-table--advancement td {
+    min-width: 7rem;
+    padding: 0.7rem 0.8rem;
+  }
+  .markdown-content table.md-table--advancement th:first-child,
+  .markdown-content table.md-table--advancement td:first-child {
+    min-width: 6.5rem;
+  }
+}
