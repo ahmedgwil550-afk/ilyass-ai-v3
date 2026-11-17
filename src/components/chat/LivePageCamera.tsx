@@ -233,8 +233,8 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
               {candidate.corners.map((point, index) => (
                 <circle
                   key={index}
-                  cx={point.x * coverGeometry.scale + coverGeometry.offsetX}
-                  cy={point.y * coverGeometry.scale + coverGeometry.offsetY}
+                  cx={point.x * containGeometry.scale + containGeometry.offsetX}
+                  cy={point.y * containGeometry.scale + containGeometry.offsetY}
                   r={7}
                   fill="#10b981"
                   stroke="white"
