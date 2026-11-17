@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "sdk_version": "3.5.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://yqisccptpkkzokwidupt.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "ilyassaiv2",
+      "version": "0.1.0",
+      "title": "ILYASSAIV2"
+    },
+    "tools": [
+      {
+        "name": "solve_exercise",
+        "title": "Résoudre un exercice",
+        "description": "Résout un exercice textuel pour un utilisateur connecté, dans la matière choisie.",
+        "annotations": {
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "question": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000,
+              "description": "Énoncé de l’exercice, sans image."
+            },
+            "subject": {
+              "type": "string",
+              "enum": [
+                "math",
+                "physics",
+                "chemistry",
+                "biology",
+                "french",
+                "arabic",
+                "english",
+                "philosophy",
+                "history",
+                "islamic",
+                "other"
+              ],
+              "description": "Matière de l’exercice."
+            }
+          },
+          "required": [
+            "question",
+            "subject"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
