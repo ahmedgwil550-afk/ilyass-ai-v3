@@ -117,11 +117,11 @@ function candidateScore(
   width: number,
   height: number,
 ): PageBoundaryCandidate | null {
-  if (!isUsablePageQuadrilateral(corners, width, height, 0.12)) return null;
+  if (!isUsablePageQuadrilateral(corners, width, height, 0.08)) return null;
 
   const area = polygonArea(corners);
   const areaRatio = area / (width * height);
-  if (areaRatio < 0.12 || areaRatio > 0.985) return null;
+  if (areaRatio < 0.08 || areaRatio > 0.985) return null;
 
   const top = distance(corners[0], corners[1]);
   const bottom = distance(corners[3], corners[2]);
@@ -133,13 +133,13 @@ function candidateScore(
   if (!Number.isFinite(aspectRatio) || aspectRatio < 0.2 || aspectRatio > 5) return null;
 
   const rectangularity = clamp(contourArea / Math.max(area, 1), 0, 1);
-  if (rectangularity < 0.82) return null;
+  if (rectangularity < 0.72) return null;
 
   const support = edgeSupport(edgeData, width, height, corners);
-  if (support < 0.48) return null;
+  if (support < 0.34) return null;
 
-  const areaScore = clamp((areaRatio - 0.12) / 0.55, 0, 1);
-  const rectangleScore = clamp((rectangularity - 0.82) / 0.18, 0, 1);
+  const areaScore = clamp((areaRatio - 0.08) / 0.55, 0, 1);
+  const rectangleScore = clamp((rectangularity - 0.72) / 0.28, 0, 1);
   const score = clamp(0.58 * support + 0.27 * rectangleScore + 0.15 * areaScore, 0, 1);
 
   return {
@@ -216,7 +216,7 @@ export async function detectPageBoundaries(
       let approximation: any;
       try {
         const contourArea = Math.abs(cv.contourArea(contour));
-        if (contourArea < analysisWidth * analysisHeight * 0.12) continue;
+        if (contourArea < analysisWidth * analysisHeight * 0.08) continue;
 
         perimeter = cv.arcLength(contour, true);
         if (!Number.isFinite(perimeter) || perimeter <= 0) continue;
@@ -245,7 +245,7 @@ export async function detectPageBoundaries(
           x: point.x / scale,
           y: point.y / scale,
         })));
-        if (!restored || !isUsablePageQuadrilateral(restored, width, height, 0.12)) continue;
+        if (!restored || !isUsablePageQuadrilateral(restored, width, height, 0.08)) continue;
 
         const result: PageBoundaryCandidate = { ...candidate, corners: restored };
         if (found.some((existing) => areNearDuplicates(existing.corners, result.corners, diagonal / scale))) {
