@@ -24,7 +24,7 @@ describe("getRectifiedDimensions", () => {
       { x: 0, y: 6000 },
     ];
     expect(getRectifiedDimensions(large, 1600)).toEqual({ width: 1067, height: 1600 });
-    expect(getRectifiedDimensions(large, 9000)).toEqual({ width: 1200, height: 1800 });
+    expect(getRectifiedDimensions(large, 9000)).toEqual({ width: 1333, height: 2000 });
   });
 
   it("rejects invalid caps and implausibly thin page shapes", () => {
