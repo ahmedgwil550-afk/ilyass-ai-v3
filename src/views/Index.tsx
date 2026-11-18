@@ -17,6 +17,7 @@ import { stabilizeStreaming } from "@/lib/stabilizeStreaming";
 import { prepareImageVariants } from "@/lib/imagePrep";
 import PageBoundaryEditor from "@/components/chat/PageBoundaryEditor";
 import LivePageCamera from "@/components/chat/LivePageCamera";
+import QuestionMapPanel from "@/components/chat/QuestionMapPanel";
 import type { PageBoundaryDetection } from "@/lib/opencvPageDetection";
 import { splitThinking, detectLang, fallbackLangForSubject } from "@/lib/thinking";
 import ThinkingPanel from "@/components/ThinkingPanel";
@@ -325,6 +326,25 @@ const Index = () => {
     setImageReviewResult(null);
     setImageReviewDraft("");
     setImageReviewOpen(false);
+  };
+
+  // اكتشاف الأسئلة: نستبدل الصورة بالمنطقة المقصوصة (التمرين بمعطياته) ونكتب المطلوب في خانة الكتابة
+  const applyRecognizedCrop = (i: number, cropped: string, hint: string) => {
+    const start = imageGroupSizes.slice(0, i).reduce((sum, size) => sum + size, 0);
+    const count = imageGroupSizes[i] ?? 1;
+    setImagePreviews((previous) => previous.map((value, index) => (index === i ? cropped : value)));
+    setImageBase64s((previous) => [...previous.slice(0, start), cropped.split(",")[1], ...previous.slice(start + count)]);
+    setImageGroupSizes((previous) => previous.map((size, index) => (index === i ? 1 : size)));
+    setPageBoundaryDetections((previous) => previous.map((value, index) => (index === i ? null : value)));
+    setImageReviewResult(null);
+    setImageReviewDraft("");
+    setImageReviewOpen(false);
+    textareaRef.current?.setValue(hint);
+    textareaRef.current?.focus();
+    toast({
+      title: lang === "ar" ? "تم تحديد الجزء المطلوب" : "Partie sélectionnée",
+      description: lang === "ar" ? "ستُرسل هذه المنطقة فقط، ويمكنك تعديل الطلب قبل الإرسال." : "Seule cette zone sera envoyée ; vous pouvez modifier la demande avant l’envoi.",
+    });
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1260,6 +1280,12 @@ const Index = () => {
                       }}
                     />
                   )}
+                  <QuestionMapPanel
+                    image={img}
+                    lang={lang}
+                    subject={subject}
+                    onApply={(cropped, hint) => applyRecognizedCrop(i, cropped, hint)}
+                  />
                   <button
                     disabled={isCheckingImage}
                     onClick={() => {

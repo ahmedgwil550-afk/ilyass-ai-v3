@@ -22,6 +22,7 @@ import { Route as ApiAnnotateSheetRouteImport } from './routes/api.annotate-shee
 import { Route as ApiAnswerFeedbackRouteImport } from './routes/api.answer-feedback'
 import { Route as ApiCurriculumIngestRouteImport } from './routes/api.curriculum-ingest'
 import { Route as ApiReadImageRouteImport } from './routes/api.read-image'
+import { Route as ApiRecognizeRouteImport } from './routes/api.recognize'
 import { Route as ApiSolveRouteImport } from './routes/api.solve'
 import { Route as ApiSolveGeometryRouteImport } from './routes/api.solve-geometry'
 import { Route as ApiSolvePdfRouteImport } from './routes/api.solve-pdf'
@@ -95,6 +96,11 @@ const ApiReadImageRoute = ApiReadImageRouteImport.update({
   path: '/api/read-image',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRecognizeRoute = ApiRecognizeRouteImport.update({
+  id: '/api/recognize',
+  path: '/api/recognize',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSolveRoute = ApiSolveRouteImport.update({
   id: '/api/solve',
   path: '/api/solve',
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/api/answer-feedback': typeof ApiAnswerFeedbackRoute
   '/api/curriculum-ingest': typeof ApiCurriculumIngestRoute
   '/api/read-image': typeof ApiReadImageRoute
+  '/api/recognize': typeof ApiRecognizeRoute
   '/api/solve': typeof ApiSolveRoute
   '/api/solve-geometry': typeof ApiSolveGeometryRoute
   '/api/solve-pdf': typeof ApiSolvePdfRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/api/answer-feedback': typeof ApiAnswerFeedbackRoute
   '/api/curriculum-ingest': typeof ApiCurriculumIngestRoute
   '/api/read-image': typeof ApiReadImageRoute
+  '/api/recognize': typeof ApiRecognizeRoute
   '/api/solve': typeof ApiSolveRoute
   '/api/solve-geometry': typeof ApiSolveGeometryRoute
   '/api/solve-pdf': typeof ApiSolvePdfRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/api/answer-feedback': typeof ApiAnswerFeedbackRoute
   '/api/curriculum-ingest': typeof ApiCurriculumIngestRoute
   '/api/read-image': typeof ApiReadImageRoute
+  '/api/recognize': typeof ApiRecognizeRoute
   '/api/solve': typeof ApiSolveRoute
   '/api/solve-geometry': typeof ApiSolveGeometryRoute
   '/api/solve-pdf': typeof ApiSolvePdfRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/api/answer-feedback'
     | '/api/curriculum-ingest'
     | '/api/read-image'
+    | '/api/recognize'
     | '/api/solve'
     | '/api/solve-geometry'
     | '/api/solve-pdf'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/api/answer-feedback'
     | '/api/curriculum-ingest'
     | '/api/read-image'
+    | '/api/recognize'
     | '/api/solve'
     | '/api/solve-geometry'
     | '/api/solve-pdf'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/api/answer-feedback'
     | '/api/curriculum-ingest'
     | '/api/read-image'
+    | '/api/recognize'
     | '/api/solve'
     | '/api/solve-geometry'
     | '/api/solve-pdf'
@@ -270,6 +282,7 @@ export interface RootRouteChildren {
   ApiAnswerFeedbackRoute: typeof ApiAnswerFeedbackRoute
   ApiCurriculumIngestRoute: typeof ApiCurriculumIngestRoute
   ApiReadImageRoute: typeof ApiReadImageRoute
+  ApiRecognizeRoute: typeof ApiRecognizeRoute
   ApiSolveRoute: typeof ApiSolveRoute
   ApiSolveGeometryRoute: typeof ApiSolveGeometryRoute
   ApiSolvePdfRoute: typeof ApiSolvePdfRoute
@@ -371,6 +384,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiReadImageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/recognize': {
+      id: '/api/recognize'
+      path: '/api/recognize'
+      fullPath: '/api/recognize'
+      preLoaderRoute: typeof ApiRecognizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/solve': {
       id: '/api/solve'
       path: '/api/solve'
@@ -431,6 +451,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAnswerFeedbackRoute: ApiAnswerFeedbackRoute,
   ApiCurriculumIngestRoute: ApiCurriculumIngestRoute,
   ApiReadImageRoute: ApiReadImageRoute,
+  ApiRecognizeRoute: ApiRecognizeRoute,
   ApiSolveRoute: ApiSolveRoute,
   ApiSolveGeometryRoute: ApiSolveGeometryRoute,
   ApiSolvePdfRoute: ApiSolvePdfRoute,
