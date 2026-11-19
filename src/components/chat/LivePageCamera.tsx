@@ -1,8 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, X, RefreshCw, ScanLine } from "lucide-react";
-import { detectPageBoundaries, type PageBoundaryCandidate } from "@/lib/opencvPageDetection";
+import {
+  detectPageBoundaries,
+  isOpenCvReady,
+  preloadOpenCv,
+  type PageBoundaryCandidate,
+} from "@/lib/opencvPageDetection";
+import { detectPageBoundariesJs } from "@/lib/jsPageDetection";
+import { detectLivePage, smoothCorners, type LivePageDetectors } from "@/lib/livePageDetection";
 import { getContainGeometry } from "@/lib/cameraOverlayGeometry";
 import { Button } from "@/components/ui/button";
+
+/** Frame colours match the reference scanner: mint-green fill with a thin solid edge. */
+const FRAME_STROKE = "rgb(62, 207, 165)";
+const FRAME_FILL = "rgba(62, 207, 165, 0.26)";
+/** Live frames are analysed at a reduced size so detection stays fast on phones. */
+const LIVE_ANALYSIS_SIDE = 640;
+const ANALYSIS_INTERVAL_MS = 400;
+
+const LIVE_DETECTORS: LivePageDetectors = {
+  opencvReady: isOpenCvReady,
+  opencv: detectPageBoundaries,
+  js: detectPageBoundariesJs,
+};
 
 interface LivePageCameraProps {
   lang: string;
@@ -18,6 +38,8 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
   const smoothedCornersRef = useRef<PageBoundaryCandidate["corners"] | null>(null);
   const missedFramesRef = useRef(0);
   const mountedRef = useRef(true);
+  const warnedOpenCvRef = useRef(false);
+  const [detectorFailed, setDetectorFailed] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [ready, setReady] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -36,6 +58,14 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
     });
     observer.observe(element);
     return () => observer.disconnect();
+  }, []);
+
+  // Warm up OpenCV in the background. Until it is ready the built-in detector
+  // already draws the frame, so the camera never waits on the WASM download.
+  useEffect(() => {
+    preloadOpenCv().catch((error) => {
+      console.warn("OpenCV could not be loaded; using the built-in page detector:", error);
+    });
   }, []);
 
   const containGeometry = getContainGeometry(
@@ -96,41 +126,47 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
           if (cancelled || !mountedRef.current) return;
           const currentVideo = videoRef.current;
           if (!currentVideo || currentVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || busyRef.current) {
-            timer = window.setTimeout(analyze, 650);
+            timer = window.setTimeout(analyze, ANALYSIS_INTERVAL_MS);
             return;
           }
           busyRef.current = true;
           setAnalyzing(true);
           try {
-            const scale = Math.min(1, 1280 / Math.max(currentVideo.videoWidth, currentVideo.videoHeight));
+            const scale = Math.min(1, LIVE_ANALYSIS_SIDE / Math.max(currentVideo.videoWidth, currentVideo.videoHeight));
             const canvas = document.createElement("canvas");
             canvas.width = Math.max(96, Math.round(currentVideo.videoWidth * scale));
             canvas.height = Math.max(96, Math.round(currentVideo.videoHeight * scale));
             const context = canvas.getContext("2d", { willReadFrequently: true });
             if (context) {
               context.drawImage(currentVideo, 0, 0, canvas.width, canvas.height);
-              const result = await detectPageBoundaries(context.getImageData(0, 0, canvas.width, canvas.height));
+              const result = await detectLivePage(
+                context.getImageData(0, 0, canvas.width, canvas.height),
+                LIVE_DETECTORS,
+              );
+              if (result.opencvError && !warnedOpenCvRef.current) {
+                warnedOpenCvRef.current = true;
+                console.warn("OpenCV page detection failed; using the built-in detector:", result.opencvError);
+              }
               if (!cancelled && mountedRef.current) {
-                const best = result?.candidates[0];
+                setDetectorFailed(false);
+                const best = result.candidate;
                 if (best) {
                   // Map detector coordinates to video pixels and smooth frame-to-frame jitter.
                   const nextCorners = best.corners.map((point) => ({
                     x: point.x / scale,
                     y: point.y / scale,
                   })) as PageBoundaryCandidate["corners"];
-                  const previous = smoothedCornersRef.current;
-                  const alpha = previous ? 0.42 : 1;
-                  const smoothed = nextCorners.map((point, index) => ({
-                    x: previous ? previous[index].x + (point.x - previous[index].x) * alpha : point.x,
-                    y: previous ? previous[index].y + (point.y - previous[index].y) * alpha : point.y,
-                  })) as PageBoundaryCandidate["corners"];
+                  const smoothed = smoothCorners(smoothedCornersRef.current, nextCorners, {
+                    alpha: 0.5,
+                    resetDistance: Math.hypot(currentVideo.videoWidth, currentVideo.videoHeight) * 0.1,
+                  });
                   smoothedCornersRef.current = smoothed;
                   missedFramesRef.current = 0;
                   setCandidate({ ...best, corners: smoothed });
                 } else {
-                  // Ignore one missed frame to prevent flicker during brief blur.
+                  // Ignore a couple of missed frames to prevent flicker during brief blur.
                   missedFramesRef.current += 1;
-                  if (missedFramesRef.current >= 2) {
+                  if (missedFramesRef.current >= 3) {
                     smoothedCornersRef.current = null;
                     setCandidate(null);
                   }
@@ -138,12 +174,13 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
               }
             }
           } catch (error) {
-            // Keep the camera usable even if OpenCV fails to initialize.
+            // Keep the camera usable even if both detectors fail.
             console.warn("Live page detection unavailable:", error);
+            if (!cancelled && mountedRef.current) setDetectorFailed(true);
           } finally {
             busyRef.current = false;
             if (!cancelled && mountedRef.current) setAnalyzing(false);
-            if (!cancelled && mountedRef.current) timer = window.setTimeout(analyze, 650);
+            if (!cancelled && mountedRef.current) timer = window.setTimeout(analyze, ANALYSIS_INTERVAL_MS);
           }
         };
         timer = window.setTimeout(analyze, 250);
@@ -219,23 +256,11 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
             >
               <polygon
                 points={candidate.corners.map((point) => `${point.x * containGeometry.scale + containGeometry.offsetX},${point.y * containGeometry.scale + containGeometry.offsetY}`).join(" ")}
-                fill="hsl(var(--accent) / 0.2)"
-                stroke="hsl(var(--accent))"
-                strokeWidth={4}
+                fill={FRAME_FILL}
+                stroke={FRAME_STROKE}
+                strokeWidth={3}
                 strokeLinejoin="round"
-                className="drop-shadow-[0_0_7px_hsl(var(--accent)/0.8)]"
               />
-              {candidate.corners.map((point, index) => (
-                <circle
-                  key={index}
-                  cx={point.x * containGeometry.scale + containGeometry.offsetX}
-                  cy={point.y * containGeometry.scale + containGeometry.offsetY}
-                  r={8}
-                  fill="hsl(var(--accent))"
-                  stroke="hsl(var(--background))"
-                  strokeWidth={2.5}
-                />
-              ))}
             </svg>
           )}
           {!ready && !cameraError && <p className="absolute inset-0 flex items-center justify-center text-sm text-white/70">{isArabic ? "جارٍ تشغيل الكاميرا…" : "Démarrage de la caméra…"}</p>}
@@ -247,10 +272,12 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
         <p className="min-h-5 text-center text-sm text-white/80" aria-live="polite">
           {candidate
             ? (isArabic ? "تم اكتشاف الورقة — حافظ على ثبات الهاتف" : "Feuille détectée — gardez le téléphone stable")
-            : analyzing
-              ? (isArabic ? "جارٍ البحث عن حواف الورقة…" : "Recherche des bords de la feuille…")
-              : (isArabic ? "وجّه الكاميرا نحو الورقة كاملة" : "Cadrez toute la feuille dans l’image")}
-          {analyzing && !candidate ? " ·" : ""}
+            : detectorFailed
+              ? (isArabic ? "تعذّر تشغيل التعرّف التلقائي — يمكنك التقاط الصورة مباشرة" : "Détection automatique indisponible — vous pouvez prendre la photo directement")
+              : analyzing
+                ? (isArabic ? "جارٍ البحث عن حواف الورقة…" : "Recherche des bords de la feuille…")
+                : (isArabic ? "وجّه الكاميرا نحو الورقة كاملة" : "Cadrez toute la feuille dans l’image")}
+          {analyzing && !candidate && !detectorFailed ? " ·" : ""}
         </p>
         <Button
           type="button"
