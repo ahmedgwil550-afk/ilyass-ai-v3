@@ -36,8 +36,11 @@ function loadOpenCv(): Promise<OpenCvApi> {
   if (!openCvPromise) {
     openCvPromise = (async () => {
       const imported = await import("@techstark/opencv-js");
-      const exported = (imported as any).default ?? imported;
-      const cv: OpenCvApi = exported instanceof Promise
+      let exported: any;
+      await import("@techstark/opencv-js").then((module) => {
+        exported = module.default;
+      });
+      const cv: OpenCvApi = exported && typeof exported.then === "function"
         ? await new Promise((resolve, reject) => exported.then(resolve, reject))
         : exported;
 
