@@ -132,8 +132,9 @@ export async function streamPdfAnalysis({
       finish();
       return;
     }
-    clearScheduled();
-    pending = "";
+    // Text that already arrived is delivered before the failure is reported, so
+    // the caller can keep everything it was sent.
+    flush();
     console.error("PDF stream error:", e);
     onError("حدث خطأ غير متوقع. حاول مرة أخرى.");
   }

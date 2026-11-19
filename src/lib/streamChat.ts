@@ -50,6 +50,7 @@ export async function streamChat({
   let ending = false;    // drain the remaining buffer, then call onDone
   let completed = false;
   let requestFailed = false;
+  let failureMessage = "";
 
   const clearScheduled = () => {
     if (timer) clearTimeout(timer);
@@ -92,14 +93,34 @@ export async function streamChat({
     clearScheduled();
     tick();
   };
+  /**
+   * Text that already arrived is never dropped: the part still waiting in the
+   * typewriter buffer is shown first, so the caller can keep everything it was
+   * sent when it learns that the stream failed.
+   */
+  const flushPending = () => {
+    clearScheduled();
+    if (pending && !signal?.aborted) {
+      const rest = pending;
+      pending = "";
+      onDelta(rest);
+    }
+    pending = "";
+  };
+  const reportFailure = (): boolean => {
+    if (!requestFailed) return false;
+    flushPending();
+    onError(failureMessage);
+    return true;
+  };
   const parseEvent = (data: string) => {
     if (data === "[DONE]") return true;
     try {
       const payload = JSON.parse(data);
       if (payload?.error?.code === "INSUFFICIENT_CREDITS") {
         requestFailed = true;
+        failureMessage = payload.error.message || "تعذر تنفيذ الطلب: رصيد Lovable AI غير كافٍ. لم تُستكمل مراحل Pananachi.";
         markLovableCreditsInsufficient();
-        onError(payload.error.message || "تعذر تنفيذ الطلب: رصيد Lovable AI غير كافٍ. لم تُستكمل مراحل Pananachi.");
         return true;
       }
       const content = payload.choices?.[0]?.delta?.content;
@@ -192,12 +213,13 @@ export async function streamChat({
       }
     }
 
-    if (requestFailed) { pending = ""; clearScheduled(); return; }
+    if (reportFailure()) return;
     if (!signal?.aborted) {
       buffer += decoder.decode();
       if (buffer) processLine(buffer);
       dispatchEvent();
       if (!finished && dataLines.length) dispatchEvent();
+      if (reportFailure()) return;
     } else {
       pending = "";
       clearScheduled();
@@ -211,8 +233,7 @@ export async function streamChat({
       finish();
       return;
     }
-    clearScheduled();
-    pending = "";
+    flushPending();
     console.error("Stream error:", e);
     onError("حدث خطأ غير متوقع. حاول مرة أخرى.");
   }

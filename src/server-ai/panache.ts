@@ -281,6 +281,14 @@ export function panacheResponse(input: PanacheInput): Response {
       };
       const step = (t: string) => emit(`- ${t}\n`);
       const end = () => { if (closed) return; closed = true; try { controller.enqueue(enc.encode("data: [DONE]\n\n")); controller.close(); } catch { /* مغلق */ } };
+      // </thinking> is written once. A second copy would appear as literal text in the answer.
+      let thinkingClosed = false;
+      const closeThinking = () => { if (thinkingClosed) return; thinkingClosed = true; emit("</thinking>\n"); };
+      // نص الإجابة الذي وصل التلميذ فعلاً (دون كتلة التفكير)
+      let finalText = "";
+      const emitA = (t: string) => { finalText += t; emit(t); };
+      // أفضل إجابة كاملة أنتجتها المراحل المدفوعة حتى الآن؛ تُسلَّم إن تعذّر إكمال المراجعة بدل رميها
+      let bestAnswer = "";
       try {
         emit("<thinking>\n");
         step("فريق Pananachi: 5 مراحل — قراءة، حل، صياغة، حل مستقل ومدقق حسابي، مراجعة نهائية");
@@ -331,7 +339,7 @@ export function panacheResponse(input: PanacheInput): Response {
         const solved = await chatOnce(solverRoutes, appendToLastUser(messages, SOLVER_TASK), signal, budget.maxOutputTokens);
         if (!solved) {
           step("تعذر الحل الرئيسي؛ تحويل إلى الوضع المتقدم العادي");
-          emit("</thinking>\n");
+          closeThinking();
           const fb = await input.fallback();
           if (fb.status === 402) throw new InsufficientLovableCreditsError();
           if (fb.ok && fb.body) { for await (const d of sseDeltas(fb)) emit(d); }
@@ -339,6 +347,7 @@ export function panacheResponse(input: PanacheInput): Response {
           return end();
         }
         const draft = stripThink(solved.text);
+        bestAnswer = draft;
         step(`تم الحل الأولي (${solved.route.label})`);
         if (signal?.aborted) return end();
 
@@ -357,8 +366,6 @@ export function panacheResponse(input: PanacheInput): Response {
             return out?.text ?? null;
           } catch { return null; } // فشل المحقِّق = لم يُفحص، ولا يُفسد الإجابة
         };
-        let finalText = "";
-        const emitA = (t: string) => { finalText += t; emit(t); }; // نص الإجابة الذي يراه التلميذ (دون كتلة التفكير)
         const verifyContext = (answer: string, independentSolution: string | null, level = vLevel) => ({
           subject: input.subject, mode: "panache", question: questionText, answer, images: imgs,
           sourceComplete: input.images.length === 0 || readingOk,
@@ -381,6 +388,9 @@ export function panacheResponse(input: PanacheInput): Response {
         const independentPromise = runIndependent
           ? chatOnce(visionRoutes, [{ role: "system", content: REVIEWER_SYSTEM }, { role: "user", content: indUser }], signal, reviewBudget.maxOutputTokens)
           : Promise.resolve(null);
+        // A credit error here is awaited only after the writer stage; without this the rejection
+        // is reported as unhandled while the writer is still running.
+        independentPromise.catch(() => {});
 
         // ---- 3) الصياغة (Claude)
         step(runWriter ? "3/5 صياغة الإجابة بأسلوب تلميذ متفوق…" : "3/5 لا حاجة لمرحلة صياغة إضافية؛ الحفاظ على الحل المباشر لتقليل التكلفة");
@@ -396,6 +406,7 @@ export function panacheResponse(input: PanacheInput): Response {
           if (w) { student = stripThink(w.text); step(`Claude غير متاح (فشل الطلب في البوابة ولا يوجد مفتاح Anthropic)؛ صيغت الإجابة بـ ${w.route.label}`); }
           else step(runWriter ? "تعذرت الصياغة؛ سيُستعمل الحل الأولي" : "تم تجاوز الصياغة الإضافية لتقليل التكلفة");
         }
+        bestAnswer = student;
         if (signal?.aborted) return end();
 
         // ---- 4) الحل المستقل (Gemini) + المدقق الحسابي
@@ -417,7 +428,7 @@ export function panacheResponse(input: PanacheInput): Response {
         const needsFinalReview = runIndependent || /أخطاء عددية/.test(arith) || !!findings;
         if (!needsFinalReview) {
           step("تم اجتياز الفحوص الأولية؛ إصدار الحل دون استدعاء نموذج إضافي");
-          emit("</thinking>\n");
+          closeThinking();
           emitA(student);
           return await finishWithVerdict(student, null);
         }
@@ -437,7 +448,7 @@ export function panacheResponse(input: PanacheInput): Response {
             });
             if (res.status === 402) throw new InsufficientLovableCreditsError();
             if (!res.ok || !res.body) { console.error("panache final", r.model, res.status); continue; }
-            emit("</thinking>\n");
+            closeThinking();
             // نتجاهل أي كتلة thinking يكتبها النموذج بنفسه
             let head = ""; let decided = false; let skipping = false;
             for await (const d of sseDeltas(res)) {
@@ -461,21 +472,37 @@ export function panacheResponse(input: PanacheInput): Response {
             if (signal?.aborted) return end();
             if (isInsufficientCredits(e)) throw e;
             console.error("panache final failed", r.model, e);
+            // Part of the answer already reached the student: never append a second
+            // full copy from another route. Say so, and finish with what was delivered.
+            if (finalText.trim()) {
+              emit("\n\n⚠️ تنبيه: انقطع بث المراجعة النهائية قبل اكتماله، فقد تكون نهاية الإجابة ناقصة.");
+              streamed = true;
+              break;
+            }
           }
         }
         if (!streamed) {
           step("تعذرت المراجعة النهائية؛ عرض النسخة المصاغة");
-          emit("</thinking>\n");
+          closeThinking();
           emitA(student);
         }
         await finishWithVerdict(finalText, ind ? independent : null);
       } catch (e) {
         if (!signal?.aborted) console.error("panache error", e);
         try {
-          emit("</thinking>\n");
+          closeThinking();
+          // ما أنتجته المراحل السابقة دُفعت تكلفته: إن لم يصل التلميذ أي جواب بعد، نسلّم أفضل نسخة كاملة
+          // مع تنبيه صريح بأنها لم تُراجَع، بدل رميها وإظهار خطأ فقط.
+          const deliverBest = (reason: string): boolean => {
+            if (finalText.trim() || !bestAnswer.trim() || signal?.aborted) return false;
+            emitA(bestAnswer);
+            emit(`\n\n⚠️ تنبيه: ${reason} راجعها بنفسك قبل الاعتماد عليها.`);
+            return true;
+          };
           if (isInsufficientCredits(e)) {
+            deliverBest("نفد الرصيد قبل المراجعة النهائية، فهذه النسخة المصاغة لم تُراجَع وقد تحتوي أخطاء.");
             controller.enqueue(enc.encode(`data: ${JSON.stringify({ error: { code: "INSUFFICIENT_CREDITS", message: "تعذر تنفيذ الطلب: رصيد Lovable AI غير كافٍ (402). أوقفنا بقية مراحل Pananachi ولم نُجرِ محاولات إضافية." } })}\n\n`));
-          } else {
+          } else if (!deliverBest("وقع خطأ قبل اكتمال المراجعة النهائية، فهذه النسخة لم تُراجَع وقد تحتوي أخطاء.")) {
             emit("حدث خطأ غير متوقع أثناء معالجة الامتحان. حاول مرة أخرى.");
           }
         } catch { /* مغلق */ }
