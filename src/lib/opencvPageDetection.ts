@@ -15,6 +15,8 @@ export interface PageBoundaryCandidate {
   areaRatio: number;
   /** Always requires explicit user confirmation until benchmarked on real captures. */
   requiresConfirmation: true;
+  /** Which detector produced the candidate. Optional so older callers keep compiling. */
+  source?: "opencv" | "js";
 }
 
 export interface PageBoundaryDetection {
@@ -25,46 +27,130 @@ export interface PageBoundaryDetection {
 
 type OpenCvApi = Record<string, any>;
 
+/**
+ * The OpenCV runtime is always carried inside this box. Emscripten builds can
+ * expose a `then` method on the module itself, and resolving or returning such
+ * an object from a promise makes the promise machinery call `then` again
+ * forever, so the runtime must never be a promise's resolution value.
+ */
+interface OpenCvBox {
+  cv: OpenCvApi;
+}
+
 const MAX_ANALYSIS_SIDE = 1280;
 const MAX_CANDIDATES = 3;
-let openCvPromise: Promise<OpenCvApi> | null = null;
+const OPENCV_INIT_TIMEOUT_MS = 30_000;
+const APPROX_EPSILONS = [0.012, 0.018, 0.026, 0.036, 0.05];
+
+/** Functions the main edge pipeline calls. Anything else is feature-detected. */
+const REQUIRED_OPENCV_APIS = [
+  "Mat",
+  "MatVector",
+  "Size",
+  "matFromImageData",
+  "resize",
+  "cvtColor",
+  "GaussianBlur",
+  "Canny",
+  "getStructuringElement",
+  "morphologyEx",
+  "findContours",
+  "approxPolyDP",
+  "arcLength",
+  "contourArea",
+] as const;
+
+let openCvPromise: Promise<OpenCvBox> | null = null;
+let openCvInstance: OpenCvApi | null = null;
 
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 
-function loadOpenCv(): Promise<OpenCvApi> {
-  if (!openCvPromise) {
-    openCvPromise = (async () => {
-      const imported = await import("@techstark/opencv-js");
-      let exported: any;
-      await import("@techstark/opencv-js").then((module) => {
-        exported = module.default;
-      });
-      const cv: OpenCvApi = exported && typeof exported.then === "function"
-        ? await new Promise((resolve, reject) => exported.then(resolve, reject))
-        : exported;
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
-      if (!cv?.Mat) {
-        await new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error("OpenCV initialization timed out.")), 20_000);
-          cv.onRuntimeInitialized = () => {
-            clearTimeout(timeout);
-            resolve();
-          };
-        });
-      }
+function missingOpenCvApis(cv: OpenCvApi | null | undefined): string[] {
+  if (!cv) return [...REQUIRED_OPENCV_APIS];
+  return REQUIRED_OPENCV_APIS.filter((name) => typeof cv[name] !== "function");
+}
 
-      if (!cv?.Mat || !cv?.findContours || !cv?.approxPolyDP) {
-        throw new Error("OpenCV.js initialized without the required contour APIs.");
-      }
-      return cv;
-    })().catch((error) => {
-      // Do not cache a failed initialization; a later upload may retry.
-      openCvPromise = null;
-      throw error;
+async function importOpenCvRuntime(): Promise<OpenCvBox> {
+  const namespace: any = await import("@techstark/opencv-js");
+  let runtime: any = namespace?.default ?? namespace;
+
+  // Newer builds export a promise (or a thenable module) for the ready runtime.
+  if (runtime && typeof runtime.then === "function") {
+    const settled = await new Promise<{ value: any }>((resolve, reject) => {
+      runtime.then((value: any) => resolve({ value }), reject);
+    });
+    runtime = settled.value;
+  }
+
+  if (!runtime) throw new Error("OpenCV.js did not export a runtime object.");
+
+  // Older builds finish initializing after the import has already returned.
+  if (typeof runtime.Mat !== "function") {
+    await new Promise<void>((resolve) => {
+      const previous = runtime.onRuntimeInitialized;
+      runtime.onRuntimeInitialized = () => {
+        try {
+          previous?.call(runtime);
+        } finally {
+          resolve();
+        }
+      };
     });
   }
+
+  return { cv: runtime };
+}
+
+function loadOpenCv(): Promise<OpenCvBox> {
+  if (!openCvPromise) {
+    openCvPromise = withTimeout(
+      importOpenCvRuntime(),
+      OPENCV_INIT_TIMEOUT_MS,
+      "OpenCV initialization timed out.",
+    )
+      .then((box) => {
+        const missing = missingOpenCvApis(box.cv);
+        if (missing.length) {
+          throw new Error(`OpenCV.js is missing required APIs: ${missing.join(", ")}.`);
+        }
+        openCvInstance = box.cv;
+        return box;
+      })
+      .catch((error) => {
+        // Do not cache a failed initialization; a later call may retry.
+        openCvPromise = null;
+        openCvInstance = null;
+        throw error;
+      });
+  }
   return openCvPromise;
+}
+
+/** True once the WASM runtime has finished initializing and passed its API check. */
+export function isOpenCvReady(): boolean {
+  return openCvInstance !== null;
+}
+
+/** Starts loading the WASM runtime in the background. Rejects if it cannot load. */
+export async function preloadOpenCv(): Promise<void> {
+  await loadOpenCv();
 }
 
 function pointAt(data: Int32Array, index: number): Point2D {
@@ -83,7 +169,7 @@ function edgeSupport(
 ): number {
   let supported = 0;
   let samples = 0;
-  const radius = 2;
+  const radius = 3;
 
   for (let side = 0; side < 4; side++) {
     const start = corners[side];
@@ -140,7 +226,7 @@ function candidateScore(
   if (rectangularity < 0.72) return null;
 
   const support = edgeSupport(edgeData, width, height, corners);
-  if (support < 0.34) return null;
+  if (support < 0.3) return null;
 
   const areaScore = clamp((areaRatio - 0.08) / 0.55, 0, 1);
   const rectangleScore = clamp((rectangularity - 0.72) / 0.28, 0, 1);
@@ -153,6 +239,7 @@ function candidateScore(
     rectangularity,
     areaRatio,
     requiresConfirmation: true,
+    source: "opencv",
   };
 }
 
@@ -162,9 +249,118 @@ function areNearDuplicates(a: Quadrilateral, b: Quadrilateral, diagonal: number)
 }
 
 /**
+ * Reduces a contour to four corners. The convex hull is simplified with a
+ * growing tolerance, so a page with slightly bowed edges, a shadow or a thumb
+ * on it still yields a quadrilateral instead of being dropped.
+ */
+function approximateQuadrilateral(cv: OpenCvApi, contour: any): Point2D[] | null {
+  let hull: any;
+  try {
+    let shape = contour;
+    if (typeof cv.convexHull === "function") {
+      hull = new cv.Mat();
+      cv.convexHull(contour, hull, false, true);
+      if (hull.rows >= 4) shape = hull;
+    }
+
+    const perimeter = cv.arcLength(shape, true);
+    if (!Number.isFinite(perimeter) || perimeter <= 0) return null;
+
+    for (const epsilon of APPROX_EPSILONS) {
+      const approximation = new cv.Mat();
+      try {
+        cv.approxPolyDP(shape, approximation, epsilon * perimeter, true);
+        if (approximation.rows < 4) return null;
+        if (
+          approximation.rows === 4 &&
+          approximation.cols === 1 &&
+          approximation.data32S.length === 8
+        ) {
+          return Array.from({ length: 4 }, (_, pointIndex) =>
+            pointAt(approximation.data32S as Int32Array, pointIndex),
+          );
+        }
+      } finally {
+        approximation.delete();
+      }
+    }
+    return null;
+  } finally {
+    hull?.delete();
+  }
+}
+
+interface CollectContext {
+  analysisWidth: number;
+  analysisHeight: number;
+  width: number;
+  height: number;
+  scale: number;
+  diagonal: number;
+  edgePixels: Uint8Array;
+}
+
+function collectCandidates(
+  cv: OpenCvApi,
+  binary: any,
+  retrievalMode: number,
+  context: CollectContext,
+  found: PageBoundaryCandidate[],
+): void {
+  const contours = new cv.MatVector();
+  const hierarchy = new cv.Mat();
+  try {
+    cv.findContours(binary, contours, hierarchy, retrievalMode, cv.CHAIN_APPROX_SIMPLE);
+    const contourCount = Math.min(contours.size(), 2500);
+
+    for (let index = 0; index < contourCount; index++) {
+      const contour = contours.get(index);
+      try {
+        const contourArea = Math.abs(cv.contourArea(contour));
+        if (contourArea < context.analysisWidth * context.analysisHeight * 0.08) continue;
+
+        const raw = approximateQuadrilateral(cv, contour);
+        if (!raw) continue;
+
+        const ordered = orderQuadrilateral(raw);
+        if (!ordered) continue;
+
+        const candidate = candidateScore(
+          ordered,
+          contourArea,
+          context.edgePixels,
+          context.analysisWidth,
+          context.analysisHeight,
+        );
+        if (!candidate) continue;
+
+        const restored = orderQuadrilateral(candidate.corners.map((point) => ({
+          x: point.x / context.scale,
+          y: point.y / context.scale,
+        })));
+        if (!restored || !isUsablePageQuadrilateral(restored, context.width, context.height, 0.08)) continue;
+
+        const result: PageBoundaryCandidate = { ...candidate, corners: restored };
+        if (found.some((existing) => areNearDuplicates(existing.corners, result.corners, context.diagonal / context.scale))) {
+          continue;
+        }
+        found.push(result);
+      } finally {
+        contour.delete();
+      }
+    }
+  } finally {
+    contours.delete();
+    hierarchy.delete();
+  }
+}
+
+/**
  * Finds page-boundary candidates using OpenCV's Canny, morphology and contour
- * pipeline. This is deliberately separate from rectification: callers must
- * show the proposed boundary and obtain user confirmation before warping.
+ * pipeline, with a brightness-mask pass when the edge pass finds nothing (a
+ * page with dense print or a grid merges into one bright region). This is
+ * deliberately separate from rectification: callers must show the proposed
+ * boundary and obtain user confirmation before warping.
  */
 export async function detectPageBoundaries(
   image: ImageData,
@@ -178,7 +374,7 @@ export async function detectPageBoundaries(
   const scale = Math.min(1, MAX_ANALYSIS_SIDE / Math.max(width, height));
   const analysisWidth = Math.max(96, Math.round(width * scale));
   const analysisHeight = Math.max(96, Math.round(height * scale));
-  const cv = await loadOpenCv();
+  const { cv } = await loadOpenCv();
 
   let source: any;
   let resized: any;
@@ -187,8 +383,9 @@ export async function detectPageBoundaries(
   let edges: any;
   let closed: any;
   let kernel: any;
-  let contours: any;
-  let hierarchy: any;
+  let mask: any;
+  let cleaned: any;
+  let maskKernel: any;
 
   try {
     source = cv.matFromImageData(image);
@@ -197,8 +394,6 @@ export async function detectPageBoundaries(
     blurred = new cv.Mat();
     edges = new cv.Mat();
     closed = new cv.Mat();
-    contours = new cv.MatVector();
-    hierarchy = new cv.Mat();
 
     cv.resize(source, resized, new cv.Size(analysisWidth, analysisHeight), 0, 0, cv.INTER_AREA);
     cv.cvtColor(resized, gray, cv.COLOR_RGBA2GRAY);
@@ -207,59 +402,27 @@ export async function detectPageBoundaries(
 
     kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
     cv.morphologyEx(edges, closed, cv.MORPH_CLOSE, kernel);
-    cv.findContours(closed, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
 
-    const edgePixels = edges.data as Uint8Array;
-    const diagonal = Math.hypot(analysisWidth, analysisHeight);
+    const context: CollectContext = {
+      analysisWidth,
+      analysisHeight,
+      width,
+      height,
+      scale,
+      diagonal: Math.hypot(analysisWidth, analysisHeight),
+      edgePixels: edges.data as Uint8Array,
+    };
     const found: PageBoundaryCandidate[] = [];
-    const contourCount = Math.min(contours.size(), 2500);
 
-    for (let index = 0; index < contourCount; index++) {
-      const contour = contours.get(index);
-      let perimeter = 0;
-      let approximation: any;
-      try {
-        const contourArea = Math.abs(cv.contourArea(contour));
-        if (contourArea < analysisWidth * analysisHeight * 0.08) continue;
+    collectCandidates(cv, closed, cv.RETR_LIST, context, found);
 
-        perimeter = cv.arcLength(contour, true);
-        if (!Number.isFinite(perimeter) || perimeter <= 0) continue;
-
-        approximation = new cv.Mat();
-        cv.approxPolyDP(contour, approximation, 0.018 * perimeter, true);
-        if (approximation.rows !== 4 || approximation.cols !== 1 || approximation.data32S.length !== 8) continue;
-        if (!cv.isContourConvex(approximation)) continue;
-
-        const raw = Array.from({ length: 4 }, (_, pointIndex) =>
-          pointAt(approximation.data32S as Int32Array, pointIndex),
-        );
-        const ordered = orderQuadrilateral(raw);
-        if (!ordered) continue;
-
-        const candidate = candidateScore(
-          ordered,
-          contourArea,
-          edgePixels,
-          analysisWidth,
-          analysisHeight,
-        );
-        if (!candidate) continue;
-
-        const restored = orderQuadrilateral(candidate.corners.map((point) => ({
-          x: point.x / scale,
-          y: point.y / scale,
-        })));
-        if (!restored || !isUsablePageQuadrilateral(restored, width, height, 0.08)) continue;
-
-        const result: PageBoundaryCandidate = { ...candidate, corners: restored };
-        if (found.some((existing) => areNearDuplicates(existing.corners, result.corners, diagonal / scale))) {
-          continue;
-        }
-        found.push(result);
-      } finally {
-        approximation?.delete();
-        contour.delete();
-      }
+    if (!found.length && typeof cv.threshold === "function") {
+      mask = new cv.Mat();
+      cleaned = new cv.Mat();
+      maskKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9));
+      cv.threshold(blurred, mask, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
+      cv.morphologyEx(mask, cleaned, cv.MORPH_CLOSE, maskKernel);
+      collectCandidates(cv, cleaned, cv.RETR_EXTERNAL, context, found);
     }
 
     found.sort((a, b) => b.score - a.score);
@@ -276,7 +439,8 @@ export async function detectPageBoundaries(
     edges?.delete();
     closed?.delete();
     kernel?.delete();
-    contours?.delete();
-    hierarchy?.delete();
+    mask?.delete();
+    cleaned?.delete();
+    maskKernel?.delete();
   }
 }
