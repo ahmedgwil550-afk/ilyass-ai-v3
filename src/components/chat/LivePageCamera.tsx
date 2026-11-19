@@ -3,7 +3,6 @@ import { Camera, X, RefreshCw, ScanLine } from "lucide-react";
 import {
   detectPageBoundaries,
   isOpenCvReady,
-  preloadOpenCv,
   type PageBoundaryCandidate,
 } from "@/lib/opencvPageDetection";
 import { detectPageBoundariesJs } from "@/lib/jsPageDetection";
@@ -18,6 +17,13 @@ const FRAME_FILL = "rgba(62, 207, 165, 0.26)";
 const LIVE_ANALYSIS_SIDE = 640;
 const ANALYSIS_INTERVAL_MS = 400;
 
+/**
+ * The camera never loads OpenCV itself. Its runtime is a very large dynamic
+ * import, and the app's root guard reloads the whole page when a dynamic import
+ * fails, which would close the camera seconds after it opens. The built-in
+ * detector draws the frame; OpenCV is used only if an earlier photo upload in
+ * this session has already loaded it.
+ */
 const LIVE_DETECTORS: LivePageDetectors = {
   opencvReady: isOpenCvReady,
   opencv: detectPageBoundaries,
@@ -58,14 +64,6 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
-
-  // Warm up OpenCV in the background. Until it is ready the built-in detector
-  // already draws the frame, so the camera never waits on the WASM download.
-  useEffect(() => {
-    preloadOpenCv().catch((error) => {
-      console.warn("OpenCV could not be loaded; using the built-in page detector:", error);
-    });
   }, []);
 
   const containGeometry = getContainGeometry(
