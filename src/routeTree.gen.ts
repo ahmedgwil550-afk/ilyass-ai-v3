@@ -21,6 +21,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as ApiAnnotateSheetRouteImport } from './routes/api.annotate-sheet'
 import { Route as ApiAnswerFeedbackRouteImport } from './routes/api.answer-feedback'
 import { Route as ApiCurriculumIngestRouteImport } from './routes/api.curriculum-ingest'
+import { Route as ApiDiagramRouteImport } from './routes/api.diagram'
 import { Route as ApiReadImageRouteImport } from './routes/api.read-image'
 import { Route as ApiRecognizeRouteImport } from './routes/api.recognize'
 import { Route as ApiSolveRouteImport } from './routes/api.solve'
@@ -91,6 +92,11 @@ const ApiCurriculumIngestRoute = ApiCurriculumIngestRouteImport.update({
   path: '/api/curriculum-ingest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDiagramRoute = ApiDiagramRouteImport.update({
+  id: '/api/diagram',
+  path: '/api/diagram',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiReadImageRoute = ApiReadImageRouteImport.update({
   id: '/api/read-image',
   path: '/api/read-image',
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/api/annotate-sheet': typeof ApiAnnotateSheetRoute
   '/api/answer-feedback': typeof ApiAnswerFeedbackRoute
   '/api/curriculum-ingest': typeof ApiCurriculumIngestRoute
+  '/api/diagram': typeof ApiDiagramRoute
   '/api/read-image': typeof ApiReadImageRoute
   '/api/recognize': typeof ApiRecognizeRoute
   '/api/solve': typeof ApiSolveRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/api/annotate-sheet': typeof ApiAnnotateSheetRoute
   '/api/answer-feedback': typeof ApiAnswerFeedbackRoute
   '/api/curriculum-ingest': typeof ApiCurriculumIngestRoute
+  '/api/diagram': typeof ApiDiagramRoute
   '/api/read-image': typeof ApiReadImageRoute
   '/api/recognize': typeof ApiRecognizeRoute
   '/api/solve': typeof ApiSolveRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/api/annotate-sheet': typeof ApiAnnotateSheetRoute
   '/api/answer-feedback': typeof ApiAnswerFeedbackRoute
   '/api/curriculum-ingest': typeof ApiCurriculumIngestRoute
+  '/api/diagram': typeof ApiDiagramRoute
   '/api/read-image': typeof ApiReadImageRoute
   '/api/recognize': typeof ApiRecognizeRoute
   '/api/solve': typeof ApiSolveRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/api/annotate-sheet'
     | '/api/answer-feedback'
     | '/api/curriculum-ingest'
+    | '/api/diagram'
     | '/api/read-image'
     | '/api/recognize'
     | '/api/solve'
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/api/annotate-sheet'
     | '/api/answer-feedback'
     | '/api/curriculum-ingest'
+    | '/api/diagram'
     | '/api/read-image'
     | '/api/recognize'
     | '/api/solve'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/api/annotate-sheet'
     | '/api/answer-feedback'
     | '/api/curriculum-ingest'
+    | '/api/diagram'
     | '/api/read-image'
     | '/api/recognize'
     | '/api/solve'
@@ -281,6 +293,7 @@ export interface RootRouteChildren {
   ApiAnnotateSheetRoute: typeof ApiAnnotateSheetRoute
   ApiAnswerFeedbackRoute: typeof ApiAnswerFeedbackRoute
   ApiCurriculumIngestRoute: typeof ApiCurriculumIngestRoute
+  ApiDiagramRoute: typeof ApiDiagramRoute
   ApiReadImageRoute: typeof ApiReadImageRoute
   ApiRecognizeRoute: typeof ApiRecognizeRoute
   ApiSolveRoute: typeof ApiSolveRoute
@@ -377,6 +390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCurriculumIngestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/diagram': {
+      id: '/api/diagram'
+      path: '/api/diagram'
+      fullPath: '/api/diagram'
+      preLoaderRoute: typeof ApiDiagramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/read-image': {
       id: '/api/read-image'
       path: '/api/read-image'
@@ -450,6 +470,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAnnotateSheetRoute: ApiAnnotateSheetRoute,
   ApiAnswerFeedbackRoute: ApiAnswerFeedbackRoute,
   ApiCurriculumIngestRoute: ApiCurriculumIngestRoute,
+  ApiDiagramRoute: ApiDiagramRoute,
   ApiReadImageRoute: ApiReadImageRoute,
   ApiRecognizeRoute: ApiRecognizeRoute,
   ApiSolveRoute: ApiSolveRoute,

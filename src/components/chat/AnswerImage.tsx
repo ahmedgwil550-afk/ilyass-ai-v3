@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import { toPng } from "html-to-image";
-import { Download, ExternalLink, ImageIcon, PenLine, Share2 } from "lucide-react";
+import { Download, ExternalLink, ImageIcon, PenLine, PenTool, Share2 } from "lucide-react";
 import ImageViewer, { openImage, saveImage, shareImage } from "./ImageViewer";
 import { annotateSheet } from "@/lib/annotateSheet";
 import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import AnswerImageLoader from "./AnswerImageLoader";
+import DiagramSolverPanel from "./DiagramSolverPanel";
 import { useToast } from "@/hooks/use-toast";
 
 // Renders the answer locally to PNG: exact math/tables, no extra AI request or cost.
@@ -14,6 +15,7 @@ export default function AnswerImage({ content, lang, id, sheetImage }: { content
   const [answerImage, setAnswerImage] = useState<string | null>(null);
   const [mountSheet, setMountSheet] = useState(false);
   const [viewer, setViewer] = useState(false);
+  const [diagramOpen, setDiagramOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const ar = lang === "ar";
@@ -55,6 +57,11 @@ export default function AnswerImage({ content, lang, id, sheetImage }: { content
     <div className="w-full space-y-3">
       <div className="flex justify-end gap-2">
         {sheetImage && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => setDiagramOpen((o) => !o)} className="gap-1.5 text-xs text-muted-foreground">
+            <PenTool className="h-4 w-4" />{ar ? "ارسم الشكل" : "Tracer la figure"}
+          </Button>
+        )}
+        {sheetImage && (
           <Button type="button" variant="ghost" size="sm" disabled={generatingImage} onClick={handleSolveOnSheet} className="gap-1.5 text-xs text-muted-foreground">
             <PenLine className="h-4 w-4" />{ar ? "حل على الورقة" : "Sur la feuille"}
           </Button>
@@ -63,6 +70,7 @@ export default function AnswerImage({ content, lang, id, sheetImage }: { content
           <ImageIcon className="h-4 w-4" />{ar ? "إنشاء صورة الحل" : "Créer l’image"}
         </Button>
       </div>
+      {diagramOpen && sheetImage && <DiagramSolverPanel sheetImage={sheetImage} answer={content} lang={lang} id={id} onClose={() => setDiagramOpen(false)} />}
       {generatingImage && <AnswerImageLoader label={ar ? "جاري رسم الحل..." : "Sketching it out"} />}
       {answerImage && !generatingImage && (
         <div className="overflow-hidden rounded-2xl border border-border">
