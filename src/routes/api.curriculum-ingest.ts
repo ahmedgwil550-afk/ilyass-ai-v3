@@ -1,19 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { z } from "zod";
-
-const chunkSchema = z.array(z.string().min(20).max(12000)).min(1).max(100);
-const bodySchema = z.object({
-  title: z.string().min(1).max(300),
-  sourceName: z.string().min(1).max(200),
-  sourceUrl: z.string().url().refine((value) => value.startsWith("https://")),
-  subject: z.enum(["math","physics","chemistry","biology","french","arabic","english","philosophy","history","islamic"]),
-  grade: z.string().min(1).max(40).default("2bac"),
-  track: z.string().max(80).optional(),
-  sourceYear: z.number().int().min(1990).max(2100).optional(),
-  isOfficial: z.boolean().default(false),
-  verified: z.boolean().default(false),
-  chunks: chunkSchema,
-}).strict();
+import {
+  buildChunkRows,
+  buildSourceRow,
+  ingestBodySchema,
+  isSearchable,
+} from "../server-ai/curriculumIngest";
 
 export const Route = createFileRoute("/api/curriculum-ingest")({
   server: {
@@ -26,22 +17,33 @@ export const Route = createFileRoute("/api/curriculum-ingest")({
         if (rawBody.length > 1_500_000) return Response.json({ error: "Payload too large." }, { status: 413 });
         let body: unknown = null;
         try { body = JSON.parse(rawBody); } catch { return Response.json({ error: "Invalid JSON." }, { status: 400 }); }
-        const parsed = bodySchema.safeParse(body);
+        const parsed = ingestBodySchema.safeParse(body);
         if (!parsed.success) return Response.json({ error: "Invalid source payload." }, { status: 400 });
         const url = process.env["SUPABASE_URL"];
         const key = process.env["SUPABASE_SERVICE_ROLE_KEY"];
         if (!url || !key) return Response.json({ error: "Database is not configured." }, { status: 503 });
         const value = parsed.data;
         const headers = { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=representation" };
+
+        if (value.sourceHash) {
+          const existing = await fetch(
+            new URL(`/rest/v1/curriculum_sources?source_hash=eq.${value.sourceHash}&select=id&limit=1`, url),
+            { headers, signal: request.signal },
+          );
+          if (!existing.ok) {
+            return Response.json({ error: "Could not check for a duplicate. Is migration 20261120000100 applied?" }, { status: 502 });
+          }
+          const rows = await existing.json();
+          const existingId = Array.isArray(rows) ? rows[0]?.id : null;
+          if (typeof existingId === "string") {
+            return Response.json({ error: "This file was already ingested.", sourceId: existingId }, { status: 409 });
+          }
+        }
+
         const sourceResponse = await fetch(new URL("/rest/v1/curriculum_sources", url), {
           method: "POST",
           headers,
-          body: JSON.stringify({
-            title: value.title, source_name: value.sourceName, source_url: value.sourceUrl,
-            subject: value.subject, grade: value.grade, track: value.track ?? null,
-            source_year: value.sourceYear ?? null, is_official: value.isOfficial,
-            verified_at: value.isOfficial && value.verified ? new Date().toISOString() : null,
-          }),
+          body: JSON.stringify(buildSourceRow(value)),
           signal: request.signal,
         });
         if (!sourceResponse.ok) return Response.json({ error: "Could not save curriculum source." }, { status: 502 });
@@ -51,11 +53,18 @@ export const Route = createFileRoute("/api/curriculum-ingest")({
         const chunkResponse = await fetch(new URL("/rest/v1/curriculum_chunks", url), {
           method: "POST",
           headers: { ...headers, Prefer: "return=minimal" },
-          body: JSON.stringify(value.chunks.map((content, chunk_index) => ({ source_id: sourceId, chunk_index, content }))),
+          body: JSON.stringify(buildChunkRows(sourceId, value.chunks)),
           signal: request.signal,
         });
-        if (!chunkResponse.ok) return Response.json({ error: "Source saved but its text chunks failed to save." }, { status: 502 });
-        return Response.json({ ok: true, sourceId, chunks: value.chunks.length, searchable: value.isOfficial && value.verified });
+        if (!chunkResponse.ok) {
+          // Remove the empty source so the same upload can be retried (chunks cascade).
+          await fetch(new URL(`/rest/v1/curriculum_sources?id=eq.${sourceId}`, url), {
+            method: "DELETE",
+            headers: { ...headers, Prefer: "return=minimal" },
+          }).catch(() => undefined);
+          return Response.json({ error: "The text chunks failed to save; nothing was kept." }, { status: 502 });
+        }
+        return Response.json({ ok: true, sourceId, chunks: value.chunks.length, searchable: isSearchable(value) });
       },
     },
   },

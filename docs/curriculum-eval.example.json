@@ -1,0 +1,30 @@
+{
+  "_comment": "EXAMPLE FORMAT ONLY. The expected phrases below are placeholders. Replace them with wording copied from the official documents you have ingested, then run: node scripts/curriculum-eval.ts docs/curriculum-eval.example.json",
+  "cases": [
+    {
+      "id": "example-answerable",
+      "question": "Question a student might ask about a topic that is in an ingested document",
+      "subject": "math",
+      "docTypes": ["lesson", "framework"],
+      "relevant": {
+        "contentIncludes": ["PHRASE COPIED FROM THE DOCUMENT", "ANOTHER PHRASE FROM THE SAME PASSAGE"]
+      }
+    },
+    {
+      "id": "example-marking-scheme",
+      "question": "Question whose answer is in an official correction",
+      "subject": "math",
+      "docTypes": ["correction"],
+      "relevant": {
+        "contentIncludes": ["PHRASE FROM THE OFFICIAL CORRECTION"],
+        "titleIncludes": "PART OF THE DOCUMENT TITLE"
+      }
+    },
+    {
+      "id": "example-out-of-scope",
+      "question": "A question the ingested documents cannot answer",
+      "subject": "math",
+      "expectNothing": true
+    }
+  ]
+}
