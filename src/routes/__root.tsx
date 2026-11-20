@@ -18,6 +18,57 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { UI_SCALE_BOOT_SCRIPT } from "../lib/display-scale";
 import UiScaleSync from "../components/UiScaleSync";
 
+const CHUNK_RETRY_FALLBACK_SCRIPT = `(function(){
+  var shown = false;
+  function showRetry(event) {
+    var target = event && event.target;
+    var message = event && event.message ? String(event.message) : "";
+    var isChunk = (target && (target.tagName === "SCRIPT" || target.tagName === "LINK")) ||
+      message.indexOf("Importing a module script failed") !== -1 ||
+      message.indexOf("Failed to fetch dynamically imported module") !== -1;
+    if (!isChunk || shown) return;
+    if (event && event.preventDefault) event.preventDefault();
+    if (event && event.stopImmediatePropagation) event.stopImmediatePropagation();
+    try {
+      if (!window.sessionStorage.getItem("chunk-reload-attempted")) {
+        window.sessionStorage.setItem("chunk-reload-attempted", "1");
+        window.location.reload();
+        return;
+      }
+    } catch (_) {}
+    shown = true;
+    var main = document.createElement("main");
+    main.className = "min-h-screen flex flex-col items-center justify-center gap-4 bg-background px-4 text-center text-foreground";
+    main.setAttribute("aria-live", "polite");
+    var title = document.createElement("h1");
+    title.className = "text-xl font-semibold";
+    title.textContent = "تعذر تحميل الصفحة";
+    var description = document.createElement("p");
+    description.className = "max-w-md text-sm text-muted-foreground";
+    description.textContent = "حدث خلل أثناء تحميل الصفحة. أعد المحاولة لفتحها من جديد.";
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground";
+    button.textContent = "إعادة المحاولة";
+    button.addEventListener("click", function() {
+      try { window.sessionStorage.removeItem("chunk-reload-attempted"); } catch (_) {}
+      window.location.reload();
+    });
+    main.append(title, description, button);
+    document.body.replaceChildren(main);
+  }
+  window.addEventListener("vite:preloadError", showRetry);
+  window.addEventListener("error", showRetry, true);
+  window.addEventListener("unhandledrejection", function(event) {
+    var reason = event && event.reason;
+    showRetry({
+      message: reason && reason.message ? String(reason.message) : String(reason || ""),
+      preventDefault: function() { event.preventDefault(); },
+      stopImmediatePropagation: function() { event.stopImmediatePropagation(); }
+    });
+  });
+})();`;
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -123,11 +174,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var K="chunk-reload-attempted";var H=function(e){var t=e&&e.target;var m=(e&&e.message)||"";var isChunk=(t&&(t.tagName==="SCRIPT"||t.tagName==="LINK"))||m.indexOf("Importing a module script failed")!==-1||m.indexOf("Failed to fetch dynamically imported module")!==-1;if(!isChunk)return;try{if(window.sessionStorage.getItem(K))return;window.sessionStorage.setItem(K,"1");window.location.reload();}catch(_){window.location.reload();}};window.addEventListener("vite:preloadError",function(e){if(e&&e.preventDefault)e.preventDefault();H({message:"Importing a module script failed",target:null});});window.addEventListener("load",function(){setTimeout(function(){try{window.sessionStorage.removeItem(K);}catch(_){}},5000);});window.addEventListener("error",H,true);window.addEventListener("unhandledrejection",function(e){H({message:String((e&&e.reason&&e.reason.message)||""),target:null});});})();`,
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: CHUNK_RETRY_FALLBACK_SCRIPT }} />
         {children}
         <Scripts />
       </body>
@@ -137,6 +184,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.removeItem("chunk-reload-attempted");
+    } catch (_) {}
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
