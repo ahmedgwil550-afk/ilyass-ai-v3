@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, X, RefreshCw, ScanLine } from "lucide-react";
-import {
-  detectPageBoundaries,
-  isOpenCvReady,
-  type PageBoundaryCandidate,
-} from "@/lib/opencvPageDetection";
+import type { PageBoundaryCandidate } from "@/lib/opencvPageDetection";
 import { detectPageBoundariesJs } from "@/lib/jsPageDetection";
 import { detectLivePage, smoothCorners, type LivePageDetectors } from "@/lib/livePageDetection";
 import { getContainGeometry } from "@/lib/cameraOverlayGeometry";
@@ -18,17 +14,13 @@ const LIVE_ANALYSIS_SIDE = 640;
 const ANALYSIS_INTERVAL_MS = 400;
 
 /**
- * The camera never loads OpenCV itself. Its runtime is a very large dynamic
- * import, and the app's root guard reloads the whole page when a dynamic import
- * fails, which would close the camera seconds after it opens. The built-in
- * detector draws the frame; OpenCV is used only if an earlier photo upload in
- * this session has already loaded it.
+ * The built-in detector (`jsPageDetection`) draws the frame. The camera does not
+ * use OpenCV at all: its runtime is a very large dynamic import (the app's root
+ * guard reloads the whole page when a dynamic import fails, which would close
+ * the camera seconds after it opens), and it has not been checked against real
+ * photos the way the built-in detector has.
  */
-const LIVE_DETECTORS: LivePageDetectors = {
-  opencvReady: isOpenCvReady,
-  opencv: detectPageBoundaries,
-  js: detectPageBoundariesJs,
-};
+const LIVE_DETECTORS: LivePageDetectors = { js: detectPageBoundariesJs };
 
 interface LivePageCameraProps {
   lang: string;
@@ -44,7 +36,6 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
   const smoothedCornersRef = useRef<PageBoundaryCandidate["corners"] | null>(null);
   const missedFramesRef = useRef(0);
   const mountedRef = useRef(true);
-  const warnedOpenCvRef = useRef(false);
   const [detectorFailed, setDetectorFailed] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [ready, setReady] = useState(false);
@@ -141,10 +132,6 @@ export default function LivePageCamera({ lang, onCapture, onClose }: LivePageCam
                 context.getImageData(0, 0, canvas.width, canvas.height),
                 LIVE_DETECTORS,
               );
-              if (result.opencvError && !warnedOpenCvRef.current) {
-                warnedOpenCvRef.current = true;
-                console.warn("OpenCV page detection failed; using the built-in detector:", result.opencvError);
-              }
               if (!cancelled && mountedRef.current) {
                 setDetectorFailed(false);
                 const best = result.candidate;
