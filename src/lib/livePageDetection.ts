@@ -3,9 +3,9 @@ import type { Quadrilateral } from "./perspectiveGeometry";
 
 /** Detectors are injected so the orchestration is testable without OpenCV or a camera. */
 export interface LivePageDetectors {
-  /** True once the OpenCV runtime is loaded and usable. */
-  opencvReady: () => boolean;
-  opencv: (image: ImageData) => Promise<PageBoundaryDetection | null>;
+  /** True once the OpenCV runtime is loaded and usable. Leave out to never use OpenCV. */
+  opencvReady?: () => boolean;
+  opencv?: (image: ImageData) => Promise<PageBoundaryDetection | null>;
   js: (image: ImageData) => PageBoundaryDetection | null;
 }
 
@@ -28,7 +28,7 @@ export async function detectLivePage(
 ): Promise<LivePageDetectionResult> {
   let opencvError: unknown = null;
 
-  if (detectors.opencvReady()) {
+  if (detectors.opencv && detectors.opencvReady?.()) {
     try {
       const result = await detectors.opencv(image);
       const best = result?.candidates[0];
