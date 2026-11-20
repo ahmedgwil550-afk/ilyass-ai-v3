@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getDetailCropRects, getScaledImageDimensions } from "./imagePrep";
+import { getDetailCropRects, getScaledImageDimensions, scalePageBoundaryDetection } from "./imagePrep";
+import type { PageBoundaryDetection } from "./opencvPageDetection";
 
 describe("getScaledImageDimensions", () => {
   it("keeps small images at their original dimensions", () => {
@@ -47,5 +48,42 @@ describe("getDetailCropRects", () => {
 
   it("does not create redundant crops for nearly square images", () => {
     expect(getDetailCropRects(1600, 1500)).toEqual([]);
+  });
+});
+
+describe("scalePageBoundaryDetection", () => {
+  const detection: PageBoundaryDetection = {
+    candidates: [{
+      corners: [
+        { x: 10, y: 20 },
+        { x: 110, y: 20 },
+        { x: 110, y: 180 },
+        { x: 10, y: 180 },
+      ],
+      score: 0.7,
+      edgeSupport: 0.9,
+      rectangularity: 0.95,
+      areaRatio: 0.5,
+      requiresConfirmation: true,
+      source: "js",
+    }],
+    analysisWidth: 256,
+    analysisHeight: 192,
+  };
+
+  it("moves the corners from the analysed copy to the full-size image", () => {
+    const scaled = scalePageBoundaryDetection(detection, 4);
+
+    expect(scaled.candidates[0].corners).toEqual([
+      { x: 40, y: 80 },
+      { x: 440, y: 80 },
+      { x: 440, y: 720 },
+      { x: 40, y: 720 },
+    ]);
+    expect(scaled.candidates[0].score).toBe(0.7);
+  });
+
+  it("returns the detection untouched when the image was not shrunk", () => {
+    expect(scalePageBoundaryDetection(detection, 1)).toBe(detection);
   });
 });

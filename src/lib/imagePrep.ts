@@ -1,6 +1,8 @@
 import { normalizeUnevenLighting } from "./imageEnhancement";
 import { analyzeDocumentPhoto, type DocumentPhotoWarning } from "./imageQuality";
-import { detectPageBoundaries, type PageBoundaryDetection } from "./opencvPageDetection";
+import { detectPageBoundariesJs } from "./jsPageDetection";
+import type { PageBoundaryDetection } from "./opencvPageDetection";
+import type { Quadrilateral } from "./perspectiveGeometry";
 
 /**
  * تجهيز صورة الورقة قبل إرسالها للنموذج.
@@ -11,6 +13,8 @@ import { detectPageBoundaries, type PageBoundaryDetection } from "./opencvPageDe
 
 const MAX_SIDE = 2560;
 const QUALITY = 0.9;
+/** The sheet is looked for on a copy no larger than this, so a big photo is never slow to appear. */
+const BOUNDARY_ANALYSIS_SIDE = 640;
 
 export interface ImageDimensions {
   width: number;
@@ -168,6 +172,51 @@ function blankMargins(ctx: CanvasRenderingContext2D, width: number, height: numb
   };
 }
 
+/** Moves detected corners from an analysed copy back to the full-size image. */
+export function scalePageBoundaryDetection(
+  detection: PageBoundaryDetection,
+  factor: number,
+): PageBoundaryDetection {
+  if (factor === 1) return detection;
+  return {
+    ...detection,
+    candidates: detection.candidates.map((candidate) => ({
+      ...candidate,
+      corners: candidate.corners.map((point) => ({
+        x: point.x * factor,
+        y: point.y * factor,
+      })) as Quadrilateral,
+    })),
+  };
+}
+
+/**
+ * Finds the sheet with the built-in detector. It is pure JavaScript and takes a
+ * few tens of milliseconds, so a photo never waits on it. (OpenCV used to run
+ * here: its runtime is a very large download with a 30 second limit, and the
+ * first photo of a session sat out of the chat until it finished or failed.)
+ */
+function detectSheetBoundary(
+  canvas: HTMLCanvasElement,
+  width: number,
+  height: number,
+): PageBoundaryDetection | null {
+  const scale = Math.min(1, BOUNDARY_ANALYSIS_SIDE / Math.max(width, height));
+  if (scale === 1) {
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    return context ? detectPageBoundariesJs(context.getImageData(0, 0, width, height)) : null;
+  }
+  const small = document.createElement("canvas");
+  small.width = Math.max(1, Math.round(width * scale));
+  small.height = Math.max(1, Math.round(height * scale));
+  const smallContext = small.getContext("2d", { willReadFrequently: true });
+  if (!smallContext) return null;
+  smallContext.imageSmoothingQuality = "high";
+  smallContext.drawImage(canvas, 0, 0, small.width, small.height);
+  const detection = detectPageBoundariesJs(smallContext.getImageData(0, 0, small.width, small.height));
+  return detection ? scalePageBoundaryDetection(detection, width / small.width) : null;
+}
+
 /** Returns a JPEG data URL ready for vision models, or null if decoding fails. */
 export async function prepareImage(
   file: File,
@@ -195,11 +244,11 @@ export async function prepareImage(
     let hasDetectedPageBoundary = false;
     if (onPageBoundaryDetection) {
       try {
-        const detection = await detectPageBoundaries(context.getImageData(0, 0, dimensions.width, dimensions.height));
+        const detection = detectSheetBoundary(canvas, dimensions.width, dimensions.height);
         hasDetectedPageBoundary = Boolean(detection?.candidates.length);
         onPageBoundaryDetection(detection);
       } catch (error) {
-        console.warn("OpenCV page-boundary detection unavailable; preserving the original image:", error);
+        console.warn("Page-boundary detection unavailable; preserving the original image:", error);
         onPageBoundaryDetection(null);
       }
     }

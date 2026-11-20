@@ -54,6 +54,15 @@ describe("detectLivePage", () => {
     expect(set.opencv).not.toHaveBeenCalled();
   });
 
+  it("runs on the built-in detector alone when no OpenCV detector is given", async () => {
+    const js = vi.fn(() => detection(candidate("js")));
+    const result = await detectLivePage(image, { js });
+
+    expect(result.engine).toBe("js");
+    expect(result.candidate?.source).toBe("js");
+    expect(result.opencvError).toBeNull();
+  });
+
   it("falls back to the built-in detector and reports the error when OpenCV throws", async () => {
     const failure = new Error("cv.something is not a function");
     const set = detectors({ opencv: vi.fn(async () => { throw failure; }) });
