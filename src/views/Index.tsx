@@ -30,7 +30,9 @@ import ChatSidebar from "@/components/ChatSidebar";
 import { streamChat, type Msg, type ModelMode, type ResponseLength } from "@/lib/streamChat";
 import { needsImageReview } from "@/lib/imageReview";
 import { buildCacheKey, getCachedAnswer, setCachedAnswer, replayCachedAnswer } from "@/lib/answerCache";
-import { ocrImages, answerIndicatesUnreadable } from "@/lib/ocrFallback";
+import { ocrImages } from "@/lib/ocrFallback";
+import { pickAnswerToKeep, shouldRetryWithOcr } from "@/lib/answerSafety";
+import { saveHistoryEntry } from "@/lib/historyStorage";
 import { verifyUnlockCode } from "@/lib/unlock";
 import { streamPdfAnalysis } from "@/lib/streamPdf";
 import { estimatePanacheUsage, getLovableCreditBlockRemaining } from "@/lib/panachePreflight";
@@ -424,9 +426,6 @@ const Index = () => {
   };
 
   const saveConversationToHistory = (conversation: ChatMessage[], subj: string) => {
-    const raw = localStorage.getItem("ilyass-history");
-    const history: HistoryConversation[] = raw ? JSON.parse(raw) : [];
-
     const firstUserMessage = conversation.find((m) => m.role === "user")?.content?.trim();
     const title = firstUserMessage?.slice(0, 120) || (lang === "ar" ? "محادثة جديدة" : "Nouvelle conversation");
     const serializedMessages = conversation.map(({ imageBase64, imageBase64s, ...rest }) => rest);
@@ -439,12 +438,44 @@ const Index = () => {
       messages: serializedMessages,
     };
 
-    const filtered = history.filter((entry) => entry.id !== chatId);
-    filtered.unshift(nextConversation);
-
-    if (filtered.length > 50) filtered.length = 50;
-    localStorage.setItem("ilyass-history", JSON.stringify(filtered));
+    // Never throws: a full or unavailable localStorage must not break the answer flow.
+    let saved = false;
+    try {
+      saved = saveHistoryEntry(localStorage, nextConversation);
+    } catch {
+      saved = false;
+    }
+    if (!saved) {
+      toast({
+        title: lang === "ar" ? "تعذّر حفظ الإجابة في السجل" : "Enregistrement impossible",
+        description: lang === "ar"
+          ? "ذاكرة المتصفح ممتلئة. الإجابة ما زالت على الشاشة، فانسخها الآن قبل مغادرة الصفحة."
+          : "La mémoire du navigateur est pleine. La réponse reste à l’écran : copiez-la avant de quitter la page.",
+        variant: "destructive",
+      });
+    }
   };
+
+  // A stream that is still running when the page is hidden or reloaded would
+  // lose its answer (history is only written when a stream ends). This writes
+  // whatever has arrived so far; a finished stream overwrites it.
+  const inFlightRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    const flush = () => {
+      try { inFlightRef.current?.(); } catch { /* storage may be unavailable */ }
+    };
+    const onVisibility = () => { if (document.visibilityState === "hidden") flush(); };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  const keptAnswerNote = (error: string) => lang === "ar"
+    ? `${error}\nتم الاحتفاظ بالإجابة التي وصلت ولن تُحذف. راجعها قبل أن تعيد الإرسال، فكل إعادة تُحتسب مرة أخرى.`
+    : `${error}\nLa réponse déjà reçue est conservée. Relisez-la avant de renvoyer : chaque nouvel envoi est facturé.`;
 
   const handlePdfSubmit = async () => {
     if (!pdfFile || pdfPageImages.length === 0) return;
@@ -498,6 +529,13 @@ const Index = () => {
 
     const base64Images = pdfPageImages.map(dataUrlToBase64);
     let fullAnswer = "";
+    inFlightRef.current = () => {
+      if (!pickAnswerToKeep(fullAnswer, "")) return;
+      saveConversationToHistory(
+        newMessages.map((m) => (m.id === assistantMsg.id ? { ...m, content: fullAnswer } : m)),
+        subject,
+      );
+    };
 
     await streamPdfAnalysis({
       pageImages: base64Images,
@@ -512,6 +550,7 @@ const Index = () => {
         );
       },
       onDone: () => {
+        inFlightRef.current = null;
         const finalMessages = newMessages.map((m) =>
           m.id === assistantMsg.id ? { ...m, content: fullAnswer } : m
         );
@@ -523,9 +562,19 @@ const Index = () => {
         removePdf();
       },
       onError: (error) => {
+        inFlightRef.current = null;
         setIsLoading(false);
         setPdfAnalyzingPage(undefined);
         abortControllerRef.current = null;
+        // An answer that already reached the screen was paid for: keep it.
+        const kept = pickAnswerToKeep(fullAnswer, "");
+        if (kept) {
+          const keptMessages = newMessages.map((m) => (m.id === assistantMsg.id ? { ...m, content: kept } : m));
+          setMessages(keptMessages);
+          saveConversationToHistory(keptMessages, subject);
+          toast({ title: t.errorTitle, description: keptAnswerNote(error), variant: "destructive" });
+          return;
+        }
         setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id));
         toast({ title: t.errorTitle, description: error, variant: "destructive" });
       },
@@ -652,6 +701,9 @@ const Index = () => {
       }));
 
     let fullAnswer = "";
+    // The answer from before an OCR retry cleared the screen. If the retry fails
+    // or returns nothing, this is put back instead of leaving the student empty-handed.
+    let previousAnswer = "";
 
     // 1) Try local cache first (instant response for repeat questions)
     const cacheKey = await buildCacheKey({
@@ -737,6 +789,15 @@ const Index = () => {
     setImagePreviews([]);
     setPageBoundaryDetections([]);
 
+    inFlightRef.current = () => {
+      const partial = pickAnswerToKeep(fullAnswer, previousAnswer);
+      if (!partial) return;
+      saveConversationToHistory(
+        newMessages.map((m) => (m.id === assistantMsg.id ? { ...m, content: partial } : m)),
+        subject,
+      );
+    };
+
     const runStream = async (extraContent?: string) => {
       const msgsForApi: Msg[] = extraContent
         ? apiMessages.map((m, i) =>
@@ -763,25 +824,39 @@ const Index = () => {
           // Stop means keep exactly the text already received. Do not trigger OCR,
           // restart the stream, clear the answer, or replace it with an empty draft.
           if (controller.signal.aborted) {
+            inFlightRef.current = null;
+            const stoppedAnswer = pickAnswerToKeep(fullAnswer, previousAnswer);
             const stoppedMessages = newMessages.map((m) =>
-              m.id === assistantMsg.id ? { ...m, content: fullAnswer } : m
+              m.id === assistantMsg.id ? { ...m, content: stoppedAnswer } : m
             );
             setMessages(stoppedMessages);
             setIsLoading(false);
             abortControllerRef.current = null;
-            if (fullAnswer) saveConversationToHistory(stoppedMessages, subject);
+            if (stoppedAnswer) saveConversationToHistory(stoppedMessages, subject);
             return;
           }
-          // 2) OCR fallback: if model couldn't read the image, retry once with OCR text
+          // 2) OCR fallback: only when the model's whole reply says it could not read the
+          // photo. A full answer that merely mentions an unclear detail, or carries a
+          // verification note, is never discarded (see src/lib/answerSafety.ts).
           const hasImages = (userMsg.imageBase64s?.length || 0) > 0;
-          if (!extraContent && hasImages && answerIndicatesUnreadable(fullAnswer)) {
+          if (shouldRetryWithOcr({ rawAnswer: fullAnswer, hasImages, alreadyRetried: Boolean(extraContent), modelMode })) {
             try {
               toast({ title: lang === "ar" ? "جاري إعادة قراءة الصورة..." : "Re-reading image…" });
               const ocrText = await ocrImages(userMsg.imageBase64s!);
               // If the user stopped while OCR was running, preserve the current
               // partial answer and never clear it or launch a second stream.
-              if (controller.signal.aborted) return;
+              if (controller.signal.aborted) {
+                inFlightRef.current = null;
+                if (fullAnswer) {
+                  saveConversationToHistory(
+                    newMessages.map((m) => (m.id === assistantMsg.id ? { ...m, content: fullAnswer } : m)),
+                    subject,
+                  );
+                }
+                return;
+              }
               if (ocrText && ocrText.length > 10) {
+                previousAnswer = fullAnswer;
                 fullAnswer = "";
                 setMessages((prev) =>
                   prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: "" } : m))
@@ -797,20 +872,34 @@ const Index = () => {
             }
           }
 
+          inFlightRef.current = null;
+          // If the retry produced nothing, show the first answer again rather than a blank message.
+          const answerToKeep = pickAnswerToKeep(fullAnswer, previousAnswer) || fullAnswer;
           const finalMessages = newMessages.map((m) =>
-            m.id === assistantMsg.id ? { ...m, content: fullAnswer } : m
+            m.id === assistantMsg.id ? { ...m, content: answerToKeep } : m
           );
           setMessages(finalMessages);
           setIsLoading(false);
           abortControllerRef.current = null;
-          if (fullAnswer) {
-            saveConversationToHistory(finalMessages, subject);
-            setCachedAnswer(cacheKey, fullAnswer);
-          }
+          if (answerToKeep) saveConversationToHistory(finalMessages, subject);
+          if (fullAnswer) setCachedAnswer(cacheKey, fullAnswer);
         },
         onError: (error) => {
+          inFlightRef.current = null;
           setIsLoading(false);
           abortControllerRef.current = null;
+          // An answer that already reached the screen was paid for: keep it, and
+          // only remove the placeholder when nothing at all arrived.
+          const kept = pickAnswerToKeep(fullAnswer, previousAnswer);
+          if (kept) {
+            const keptMessages = newMessages.map((m) =>
+              m.id === assistantMsg.id ? { ...m, content: kept } : m
+            );
+            setMessages(keptMessages);
+            saveConversationToHistory(keptMessages, subject);
+            toast({ title: t.errorTitle, description: keptAnswerNote(error), variant: "destructive" });
+            return;
+          }
           setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id));
           toast({ title: t.errorTitle, description: error, variant: "destructive" });
         },
