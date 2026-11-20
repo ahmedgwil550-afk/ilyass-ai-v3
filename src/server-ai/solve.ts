@@ -115,7 +115,7 @@ FORMAT YOUR ANSWERS LIKE THIS:
 
 ## 📘 Exercice
 
-### ❓ Question 1
+###  Question 1
 
 🧠 Étapes :
 - Étape 1 : ...
@@ -128,7 +128,7 @@ FORMAT YOUR ANSWERS LIKE THIS:
 ---
 
 DESIGN RULES:
-- Use emojis for sections (📘 ❓ 🧠 ✅)
+- Use emojis for sections (📘  🧠 ✅)
 - Bold final answers with **bold**
 - Add spacing between parts (use blank lines)
 - Never return plain text without structure
